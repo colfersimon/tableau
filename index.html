@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Carnet · Gains</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Unbounded:wght@400;500;700&display=swap">
+<style>
+/* 12/11/2026 : page Gains V5 (style « Chrome Y2K » choisi par Simon : métal argenté, reflets holographiques, barres
+   rectangulaires). Mêmes données et même logique que la V1 (gains.enc chiffré, clé après le #, comptes « en attente » hors
+   de tous les totaux, « aujourd'hui » décidé par la date des données). Un seul look clair, voulu.
+   Une couleur = une personne, partout (slot fixe de regles.json). */
+:root {
+  --bg: #DDE3EA; --card: rgba(255,255,255,.42); --card-2: rgba(255,255,255,.80); --line: rgba(16,19,26,.13); --line-2: rgba(16,19,26,.07);
+  --fg: #10131A; --fg-2: #2A303B; --muted: #566070; --dim: #7C8594;
+  --or: #7DF9FF; --or-2: #FF7DF0; --ar1: #8E9AAD; --ar2: #E3E8EF; --pos: #0B7A4B; --neg: #C2412D; --warn: #9A6200;
+  --c1: #3D6FE0; --c2: #E07B2E; --c3: #149C82; --c4: #C29A00; --c5: #D63FB8; --c6: #8A4FE0; --c7: #2F8A2F; --c8: #D64545; --gris: #8A93A3;
+  --f: "Geist", "Inter", system-ui, -apple-system, sans-serif; --u: "Unbounded", "Geist", sans-serif;
+  --halo: #fff; --grille: rgba(16,19,26,.08); --grille0: rgba(16,19,26,.22); --vise: rgba(16,19,26,.35); --bneg: #10131A; --bneg-o: .85;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; color: var(--fg); font-family: var(--f); font-size: 14px; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1;
+  background: linear-gradient(135deg, #F5F7FA 0%, #C3CBD6 30%, #F2F4F7 52%, #A9B3C2 75%, #E6EAF0 100%) fixed, var(--bg); }
+body::after { content: ""; position: fixed; inset: -20% auto auto -10%; width: 70vw; height: 70vh; pointer-events: none; z-index: 0; background: radial-gradient(closest-side, rgba(255,255,255,.55), rgba(255,255,255,0)); }
+.wrap { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.num { font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; }
+.pos { color: var(--pos); } .neg { color: var(--neg); } .nul { color: var(--muted); }
+
+/* Barre commune (ajoutée par publier.py) habillée en chrome, en clair comme en sombre */
+html body .cn-barre { background: rgba(236,239,244,.72); border-bottom: 1px solid rgba(255,255,255,.75); box-shadow: 0 1px 0 rgba(16,19,26,.06); margin: 0; }
+html body .cn-in { max-width: 1208px; }
+html body .cn-marque { color: var(--fg); font-family: var(--u); font-weight: 700; letter-spacing: -.03em; }
+html body .cn-logo { background: linear-gradient(135deg, #7DF9FF, #C9A9FF 50%, #FF7DF0); box-shadow: 0 2px 8px rgba(138,79,224,.3); }
+html body .cn-onglets { background: rgba(16,19,26,.06); }
+html body .cn-onglets a { color: var(--muted); }
+html body .cn-onglets a:hover { color: var(--fg); background: rgba(255,255,255,.7); }
+html body .cn-onglets a.cn-ici { background: var(--fg); color: #fff; box-shadow: none; }
+html body .cn-direct { color: var(--muted); }
+
+.msg { padding: 80px 0; text-align: center; color: var(--muted); font-size: 15px; }
+.tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding-block: 28px 20px; }
+.tete h1 { margin: 0; font-family: var(--u); font-weight: 700; font-size: clamp(28px, 4.5vw, 40px); letter-spacing: -.04em; line-height: 1; }
+.tete h1 i { font-style: normal; background: linear-gradient(90deg, #3DBAC4, #8A6BFF, #E04FC9); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.tete p { margin: 10px 0 0; color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pouls { width: 7px; height: 7px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 0 4px rgba(11,122,75,.15); }
+.pouls.eteint { background: var(--dim); box-shadow: none; }
+.nav-p { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: inline-flex; background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.9); border-radius: 999px; padding: 4px; gap: 2px; flex-wrap: wrap; box-shadow: 0 6px 16px -8px rgba(60,70,90,.3); }
+.seg button { font-size: 13px; color: var(--muted); background: none; border: 0; padding: 7px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: #fff; }
+.fleches { display: inline-flex; gap: 4px; }
+.fleches button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.6); cursor: pointer; font-size: 18px; line-height: 1; box-shadow: 0 6px 16px -8px rgba(60,70,90,.3); }
+.fleches button:disabled { opacity: .35; cursor: default; }
+button:focus-visible, tr:focus-visible, a:focus-visible { outline: 2px solid #8A6BFF; outline-offset: 2px; }
+
+.g1 { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 14px; }
+.cote { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.g2, .g5 { margin-top: 14px; }
+.g3 { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+.g4 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+@media (max-width: 960px) { .g1, .g3, .g4 { grid-template-columns: minmax(0, 1fr); } }
+.carte { background: linear-gradient(180deg, var(--card-2), var(--card)); border: 1px solid rgba(255,255,255,.9); border-radius: 26px; min-width: 0;
+  box-shadow: 0 12px 32px -12px rgba(60,70,90,.28), 0 1px 0 rgba(255,255,255,.9) inset; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.carte-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px 4px; flex-wrap: wrap; }
+.carte-h h2 { margin: 0; font-family: var(--u); font-size: 13.5px; font-weight: 500; letter-spacing: -.02em; }
+.carte-h > span { color: var(--muted); font-size: 12.5px; }
+.vide { color: var(--muted); padding: 14px 22px 20px; font-size: 13.5px; }
+
+.hero { display: flex; flex-direction: column; }
+.res { padding: 22px 22px 4px; }
+.res-l { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.gros { font-family: var(--u); font-size: clamp(38px, 6.2vw, 64px); font-weight: 700; letter-spacing: -.05em; line-height: 1.08; margin-top: 10px; }
+.gros span { background: linear-gradient(180deg, #10131A 30%, #6E7B91 60%, #10131A 90%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.gros span.neg { background: linear-gradient(180deg, #C2412D 30%, #E8968A 60%, #C2412D 90%); -webkit-background-clip: text; background-clip: text; }
+.gros .dec { opacity: .55; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.6); color: var(--fg-2); }
+.chip.pos { color: var(--pos); } .chip.neg { color: var(--neg); } .chip.warn { color: var(--warn); border-color: rgba(154,98,0,.3); background: rgba(255,236,190,.55); }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 18px 22px 4px; }
+.stats div { background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.4)); border: 1px solid rgba(255,255,255,.9); box-shadow: 0 6px 16px rgba(60,70,90,.16); border-radius: 999px; padding: 9px 8px; display: grid; gap: 2px; min-width: 0; text-align: center; }
+.stats span { color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats b { font-family: var(--u); font-weight: 700; font-size: 14px; letter-spacing: -.03em; white-space: nowrap; }
+@media (max-width: 680px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .nav-p { width: 100%; flex-wrap: nowrap; } .seg { flex-wrap: nowrap; overflow-x: auto; min-width: 0; flex: 1; scrollbar-width: none; } .seg::-webkit-scrollbar { display: none; } }
+.zone-g { position: relative; flex: 1; min-height: 250px; margin: 6px 0 4px; }
+.zone-g svg { position: absolute; left: 14px; top: 10px; width: calc(100% - 28px); height: calc(100% - 20px); overflow: visible; display: block; touch-action: pan-y; }
+.bulle { position: absolute; pointer-events: none; background: rgba(255,255,255,.92); color: var(--fg); font-size: 12px; line-height: 1.55; padding: 9px 12px; border-radius: 14px; white-space: nowrap; opacity: 0; transition: opacity .12s; z-index: 3;
+  border: 1px solid rgba(255,255,255,1); box-shadow: 0 14px 34px -10px rgba(40,50,70,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); min-width: 170px; }
+.bulle.vu { opacity: 1; }
+.bulle .t { font-weight: 600; margin-bottom: 3px; }
+.bulle .l { display: flex; justify-content: space-between; gap: 16px; }
+.bulle .l span { display: inline-flex; align-items: center; gap: 6px; color: var(--fg-2); }
+.bulle .l b { font-weight: 600; }
+.bulle .sep { border-top: 1px solid var(--line); margin: 5px 0 4px; }
+.pt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+.dette { position: relative; overflow: hidden; border-radius: 26px; padding: 22px; display: grid; gap: 16px;
+  background: radial-gradient(90% 120% at 100% 0%, rgba(125,249,255,.45), rgba(125,249,255,0) 55%), radial-gradient(80% 100% at 0% 100%, rgba(255,125,240,.35), rgba(255,125,240,0) 60%), linear-gradient(135deg, #FBFCFE 0%, #CDD5E0 45%, #F4F6F9 60%, #B9C3D1 100%);
+  border: 1px solid rgba(255,255,255,.95); box-shadow: 0 18px 40px -18px rgba(60,70,90,.45), 0 1px 0 #fff inset; }
+.dette::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,.22) 0 1px, transparent 1px 6px); pointer-events: none; }
+.dette > * { position: relative; z-index: 1; }
+.dette-h { display: flex; justify-content: space-between; align-items: center; color: var(--fg-2); font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.dette-h em { font-family: var(--u); font-style: normal; font-weight: 700; text-transform: none; letter-spacing: -.03em; font-size: 15px; }
+.dette .v { font-family: var(--u); font-size: 30px; font-weight: 700; letter-spacing: -.05em; }
+.dette .v small { display: block; font-family: var(--f); font-weight: 400; font-size: 12px; letter-spacing: 0; color: var(--muted); margin-bottom: 4px; }
+.jauge { height: 5px; border-radius: 999px; background: rgba(16,19,26,.1); overflow: hidden; }
+.jauge i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7DF9FF, #C9A9FF, #FF7DF0); }
+.dette .bas { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+.dette .det { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; border-top: 1px solid rgba(16,19,26,.12); padding-top: 12px; }
+.dette .det span { display: block; color: var(--muted); font-size: 11px; }
+.dette .det b { font-weight: 600; font-size: 13.5px; }
+.dette .apres { color: var(--muted); font-size: 11.5px; }
+
+.rep { padding: 12px 22px 18px; display: grid; gap: 12px; }
+.seg-barre { display: flex; gap: 3px; height: 8px; }
+.seg-barre i { display: block; height: 100%; border-radius: 2px; }
+.ligne { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line-2); }
+.ligne:first-child { border-top: 0; }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; background: linear-gradient(180deg, #fff, rgba(255,255,255,.5)); border: 1px solid rgba(255,255,255,.95); box-shadow: 0 2px 6px rgba(60,70,90,.18); flex: none; }
+.qui { font-size: 13.5px; min-width: 0; }
+.qui small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.ligne .pc { color: var(--muted); font-size: 12px; text-align: right; }
+.ligne .v { font-size: 14px; font-weight: 600; text-align: right; min-width: 76px; }
+
+.defile { overflow-x: auto; padding: 4px 8px 8px; }
+.tab { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tab th { text-align: left; color: var(--muted); font-weight: 400; font-size: 12px; padding: 10px 14px; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.tab td { padding: 11px 14px; border-top: 1px solid var(--line-2); white-space: nowrap; }
+.tab tbody tr:first-child td { border-top: 0; }
+.tab .d { text-align: right; }
+.tab tbody tr:hover { background: rgba(255,255,255,.45); }
+.tab tfoot td { border-top: 1px solid var(--line); font-weight: 600; }
+.robot { display: flex; align-items: center; gap: 12px; }
+.robot small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.etat { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.6); border: 1px solid var(--line); color: var(--fg-2); }
+.etat::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+.etat.jeu::before { background: var(--pos); box-shadow: 0 0 8px var(--pos); } .etat.pause::before { background: var(--c1); }
+.etat.panne { color: var(--warn); } .etat.panne::before { background: var(--warn); }
+.etat-m { display: none; }
+.attente { color: var(--warn); }
+.cev-bas { color: var(--warn); }
+.bilan { color: var(--fg-2); font-size: 13px; line-height: 1.55; padding: 4px 22px 18px; }
+.bilan p { margin: 6px 0; }
+@media (max-width: 680px) { .tab .opt { display: none; } .etat-m { display: inline; } .tab td.attente { white-space: normal; } }
+
+.cumul-c { display: flex; flex-direction: column; }
+.cumul-c .zone-g { min-height: 320px; flex: none; height: clamp(320px, 34vw, 440px); }
+.onglets { display: inline-flex; background: rgba(16,19,26,.06); border-radius: 999px; padding: 3px; }
+.onglets button { border: 0; background: none; padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.onglets button[aria-pressed="true"] { background: #fff; color: var(--fg); box-shadow: 0 1px 4px rgba(60,70,90,.2); }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 6px 22px 0; font-size: 12.5px; color: var(--fg-2); }
+.legende span { display: inline-flex; align-items: center; gap: 7px; }
+.legende i { width: 12px; height: 3px; border-radius: 2px; }
+.legende b { font-weight: 600; }
+
+.solde { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 22px; border-top: 1px solid var(--line-2); }
+.solde .v { text-align: right; font-weight: 600; }
+.solde .v small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+.note-bas { color: var(--muted); font-size: 12px; line-height: 1.5; padding: 10px 22px 18px; }
+.alerte { display: grid; grid-template-columns: 3px minmax(0, 1fr); gap: 12px; padding: 11px 22px; border-top: 1px solid var(--line-2); }
+.alerte i { border-radius: 2px; }
+.alerte b { font-weight: 600; font-size: 13.5px; }
+.alerte p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.alerte .qd { color: var(--dim); font-size: 11.5px; font-weight: 400; margin-left: 6px; }
+details.regles-ok { padding: 8px 22px 16px; color: var(--muted); font-size: 12.5px; }
+details.regles-ok summary { cursor: pointer; }
+details.regles-ok div { padding: 4px 0 0 12px; }
+
+.jr { cursor: pointer; }
+.jr td:first-child::before { content: "›"; display: inline-block; width: 14px; color: var(--muted); transition: transform .15s; }
+.jr[aria-expanded="true"] td:first-child::before { transform: rotate(90deg); }
+.jr .mini { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: 1px; }
+.jr .mini .pt { width: 6px; height: 6px; }
+.badge { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--line); background: rgba(255,255,255,.6); color: var(--muted); }
+.jd td { padding: 4px 14px 14px 28px; border-top: 0; white-space: normal; }
+.jd h4 { margin: 10px 0 4px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.jd h4 small { color: var(--muted); font-weight: 400; }
+.jd .f { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; font-size: 12.5px; color: var(--fg-2); }
+.jd .f span:nth-child(even) { text-align: right; }
+.plus { display: block; margin: 0 auto 16px; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.6); border-radius: 999px; padding: 8px 16px; cursor: pointer; font-size: 13px; box-shadow: 0 6px 16px -8px rgba(60,70,90,.3); }
+
+.regles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; padding: 8px 22px 20px; }
+.regle .nom { font-weight: 600; font-size: 13.5px; margin-bottom: 8px; }
+.empile { display: flex; gap: 3px; height: 26px; border-radius: 8px; overflow: hidden; }
+.empile div { display: grid; place-items: center; color: #fff; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.leg-r { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12px; color: var(--fg-2); }
+.leg-r span { display: inline-flex; align-items: center; gap: 6px; }
+.qui-sont { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+
+.pied { color: var(--muted); font-size: 12.5px; line-height: 1.7; text-align: center; padding: 26px 0 56px; }
+.bouton-feuille { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: var(--fg); color: #fff; text-decoration: none; font-weight: 600; margin-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) { .bulle { transition: none; } }
+
+/* 12/11 : mode nuit (demande de Mathieu), suit le réglage du téléphone ou de l'ordinateur. Même style chrome, version graphite. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0C0F14; --card: rgba(30,35,45,.62); --card-2: rgba(44,50,63,.86); --line: rgba(255,255,255,.12); --line-2: rgba(255,255,255,.06);
+    --fg: #EEF1F6; --fg-2: #C9CFD9; --muted: #8E97A7; --dim: #6B7484;
+    --ar1: #5E6879; --ar2: #D3DAE5; --pos: #3DDC97; --neg: #FF7A66; --warn: #F2B33D;
+    --c1: #6E9BFF; --c2: #FF9A4D; --c3: #2FD1B0; --c4: #F0C93A; --c5: #FF6FD8; --c6: #B08CFF; --c7: #59C559; --c8: #FF6B6B; --gris: #7D8696;
+    --halo: #1E232D; --grille: rgba(255,255,255,.07); --grille0: rgba(255,255,255,.22); --vise: rgba(255,255,255,.35); --bneg: #FF7A66; --bneg-o: .8;
+    color-scheme: dark;
+  }
+  body { background: linear-gradient(135deg, #1D222B 0%, #0A0C10 32%, #1A1F28 52%, #06070A 78%, #161A22 100%) fixed, var(--bg); }
+  body::after { background: radial-gradient(closest-side, rgba(125,249,255,.07), rgba(125,249,255,0)); }
+  html body .cn-barre { background: rgba(14,17,22,.78); border-bottom: 1px solid rgba(255,255,255,.07); box-shadow: none; }
+  html body .cn-onglets { background: rgba(255,255,255,.06); }
+  html body .cn-onglets a:hover { background: rgba(255,255,255,.08); }
+  html body .cn-onglets a.cn-ici, .seg button[aria-pressed="true"], .bouton-feuille { background: #EEF1F6; color: #0C0F14; }
+  .seg, .fleches button, .plus { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); box-shadow: 0 6px 16px -8px rgba(0,0,0,.6); }
+  .carte { border-color: rgba(255,255,255,.09); box-shadow: 0 16px 36px -14px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.08) inset; }
+  .gros span { background: linear-gradient(180deg, #FFFFFF 30%, #8E9AAD 60%, #FFFFFF 90%); -webkit-background-clip: text; background-clip: text; }
+  .gros span.neg { background: linear-gradient(180deg, #FF7A66 30%, #FFC1B6 60%, #FF7A66 90%); -webkit-background-clip: text; background-clip: text; }
+  .chip, .etat, .badge { background: rgba(255,255,255,.06); }
+  .chip.warn { background: rgba(242,179,61,.12); border-color: rgba(242,179,61,.35); }
+  .stats div { background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.03)); border-color: rgba(255,255,255,.1); box-shadow: 0 6px 16px rgba(0,0,0,.45); }
+  .bulle { background: rgba(24,28,36,.94); border-color: rgba(255,255,255,.12); box-shadow: 0 14px 34px -10px rgba(0,0,0,.8); }
+  .dette { background: radial-gradient(90% 120% at 100% 0%, rgba(125,249,255,.22), rgba(125,249,255,0) 55%), radial-gradient(80% 100% at 0% 100%, rgba(255,125,240,.2), rgba(255,125,240,0) 60%), linear-gradient(135deg, #2C333F 0%, #12161D 45%, #262C37 60%, #0E1116 100%);
+    border-color: rgba(255,255,255,.12); box-shadow: 0 18px 40px -18px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.1) inset; }
+  .dette::after { background: repeating-linear-gradient(115deg, rgba(255,255,255,.04) 0 1px, transparent 1px 6px); }
+  .jauge { background: rgba(255,255,255,.1); }
+  .dette .det { border-top-color: rgba(255,255,255,.12); }
+  .av { background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04)); border-color: rgba(255,255,255,.12); box-shadow: none; }
+  .tab tbody tr:hover { background: rgba(255,255,255,.04); }
+  .onglets { background: rgba(255,255,255,.06); }
+  .onglets button[aria-pressed="true"] { background: rgba(255,255,255,.14); color: var(--fg); box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<!-- 11/11 : barre commune des pages (Gains, Tableau, Suivi, Simulateur, Commandes ; Gains = accueil depuis le 12/11), ajoutée par publier.py juste après <body>.
+     Garde la clé (#...) d'une page à l'autre. Classes préfixées cn- : rien ne se mélange avec le style de la page. -->
+<style id="cn-style">
+.cn-barre{position:sticky;top:0;z-index:50;margin:0 0 14px;padding:10px 16px;
+  background:rgba(250,249,246,.82);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid rgba(0,0,0,.07);font:15px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.cn-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cn-marque{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.02em;font-size:17px;color:#16140f;text-decoration:none}
+.cn-logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#1f9d63 0%,#0f6e8c 55%,#6b4fd8 100%);
+  box-shadow:0 2px 8px rgba(31,157,99,.35);display:inline-block;position:relative}
+.cn-logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(255,255,255,.9)}
+.cn-onglets{display:flex;gap:4px;background:rgba(0,0,0,.05);padding:4px;border-radius:12px;overflow-x:auto;max-width:100%}
+.cn-onglets a{padding:7px 12px;border-radius:9px;color:#4a463e;text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.cn-onglets a:hover{color:#16140f;background:rgba(255,255,255,.6)}
+.cn-onglets a.cn-ici{background:#fff;color:#16140f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cn-direct{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:#6b665c;font-weight:600}
+.cn-point{width:8px;height:8px;border-radius:50%;background:#1f9d63;box-shadow:0 0 0 0 rgba(31,157,99,.6);animation:cn-pouls 2s infinite}
+@keyframes cn-pouls{0%{box-shadow:0 0 0 0 rgba(31,157,99,.55)}70%{box-shadow:0 0 0 7px rgba(31,157,99,0)}100%{box-shadow:0 0 0 0 rgba(31,157,99,0)}}
+@media (prefers-color-scheme:dark){
+  .cn-barre{background:rgba(20,20,22,.78);border-bottom-color:rgba(255,255,255,.08)}
+  .cn-marque{color:#f3f1ec}.cn-onglets{background:rgba(255,255,255,.07)}
+  .cn-onglets a{color:#b9b4aa}.cn-onglets a:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .cn-onglets a.cn-ici{background:#2c2c30;color:#fff;box-shadow:none}.cn-direct{color:#9c978d}}
+@media (max-width:560px){.cn-barre{padding:8px 12px}.cn-direct{display:none}.cn-in{gap:8px}.cn-onglets{flex:1}.cn-onglets a{flex:1;text-align:center;padding:7px 6px}}
+@media print{.cn-barre{display:none}}
+</style>
+<nav class="cn-barre" aria-label="Pages du carnet"><div class="cn-in">
+  <a class="cn-marque" data-cn="index.html" href="#"><span class="cn-logo"></span>Carnet</a>
+  <div class="cn-onglets">
+    <a data-cn="index.html" href="#">Gains</a>
+    <a data-cn="tableau.html" href="#">Tableau</a>
+    <a data-cn="suivi.html" href="#">Suivi</a>
+    <a data-cn="simulateur.html" href="#">Simulateur</a>
+    <a data-cn="commandes.html" href="#">Commandes</a>
+  </div>
+  <span class="cn-direct"><span class="cn-point"></span>4 Mac · mis à jour toutes les 2 min</span>
+</div></nav>
+<script id="cn-script">
+(function () {
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (page.indexOf('.html') < 0) page = 'index.html';
+  var liens = document.querySelectorAll('.cn-barre a[data-cn]');
+  function maj() {
+    for (var i = 0; i < liens.length; i++) {
+      var a = liens[i], cible = a.getAttribute('data-cn');
+      a.setAttribute('href', cible + (location.hash || '').split('&')[0]);      // la clé seule (le simulateur ajoute &scénario)
+      if (cible === page && a.className.indexOf('cn-marque') < 0) a.className = 'cn-ici';
+    }
+  }
+  maj();
+  window.addEventListener('hashchange', maj);
+})();
+</script>
+
+<div class="wrap">
+  <div id="msg" class="msg">Chargement des chiffres…</div>
+  <main id="app" hidden>
+    <div class="tete">
+      <div><h1>Les <i>gains</i></h1><p id="sous"></p></div>
+      <div class="nav-p">
+        <div class="seg" role="group" aria-label="Période" id="seg"></div>
+        <div class="fleches"><button type="button" id="avant" aria-label="Période d'avant">‹</button><button type="button" id="apres" aria-label="Période suivante">›</button></div>
+      </div>
+    </div>
+
+    <section class="g1">
+      <div class="carte hero">
+        <div class="res">
+          <div class="res-l" id="res-l"></div>
+          <div class="gros num" id="gros"></div>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="zone-g" id="g1"><svg id="svg1" role="img" aria-label="Résultat jour par jour"></svg><div class="bulle" id="bulle1"></div></div>
+      </div>
+      <div class="cote">
+        <div class="dette" id="dette"></div>
+        <div class="carte">
+          <div class="carte-h"><h2>Dans la poche</h2><span id="rep-p"></span></div>
+          <div class="rep"><div class="seg-barre" id="barre" aria-hidden="true"></div><div id="liste"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="carte g2">
+      <div class="carte-h"><h2>Par compte</h2><span id="pc-p"></span></div>
+      <div class="defile"><table class="tab" id="comptes"></table></div>
+      <div class="bilan" id="bilan"></div>
+    </section>
+
+    <section class="g3">
+      <div class="carte cumul-c">
+        <div class="carte-h"><h2>Cumul</h2><div class="onglets" id="g2-mode"><button type="button" data-m="personnes">Par personne</button><button type="button" data-m="comptes">Par compte</button></div></div>
+        <div class="legende" id="legende"></div>
+        <div class="zone-g" id="g2"><svg id="svg2" role="img" aria-label="Cumul"></svg><div class="bulle" id="bulle2"></div></div>
+      </div>
+      <div class="cote">
+        <div class="carte" id="soldes"></div>
+        <div class="carte" id="alertes"></div>
+      </div>
+    </section>
+
+    <section class="g4">
+      <div class="carte">
+        <div class="carte-h"><h2>Robots</h2><span id="robots-note">en direct</span></div>
+        <div class="defile"><table class="tab" id="robots"></table></div>
+      </div>
+      <div class="carte">
+        <div class="carte-h"><h2>Jour par jour</h2><span>touche un jour pour voir le calcul</span></div>
+        <div class="defile"><table class="tab" id="jours"></table></div>
+        <button type="button" class="plus" id="plus-jours">Voir plus de jours</button>
+      </div>
+    </section>
+
+    <section class="carte g5">
+      <div class="carte-h"><h2>Règles de partage</h2><span id="regles-note"></span></div>
+      <div class="regles" id="regles"></div>
+    </section>
+    <div class="pied" id="pied"></div>
+  </main>
+</div>
+<script>
+(function () {
+  "use strict";
+  const DONNEES = "https://raw.githubusercontent.com/colfersimon/tableau/donnees/gains.enc";
+  const RAFRAICHIR_MS = 60000;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const f2 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+  const f1 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const signe = x => x > 0.004 ? "+" : x < -0.004 ? "−" : "";
+  const eur = x => x == null ? "–" : signe(x) + f2.format(Math.abs(x)) + " €";
+  const eurA = x => x == null ? "–" : f2.format(Math.abs(x)) + " €";
+  const eurC = x => x == null ? "–" : signe(x) + f0.format(Math.abs(x)) + " €";
+  const cls = x => x == null ? "nul" : x > 0.004 ? "pos" : x < -0.004 ? "neg" : "nul";
+  const pct = x => x == null ? "–" : f0.format(x * 100) + " %";
+  const heures = h => { if (!h) return "0 min"; const m = Math.round(h * 60); return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0"); };
+  const JS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  const JL = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+  const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const dcourt = s => { const d = new Date(s + "T12:00:00"); return JS[d.getDay()] + " " + s.slice(8, 10) + "/" + s.slice(5, 7); };
+  const dlong = s => { const d = new Date(s + "T12:00:00"); const t = JL[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()]; return t.charAt(0).toUpperCase() + t.slice(1); };
+  const ddm = s => s ? s.slice(8, 10) + "/" + s.slice(5, 7) : "";
+  const hm = iso => iso ? String(iso).slice(11, 16) : "?";
+  const ETATS = { EN_SESSION: ["jeu", "En jeu"], PAUSE: ["pause", "En pause"], FIN_DE_CRENEAU: ["pause", "Finit ses tables"], ARRETE: ["", "Arrêté"] };
+  const TYPES = [["jour", "Jour"], ["semaine", "Semaine"], ["mois", "Mois"], ["trimestre", "3 mois"], ["annee", "Année"], ["tout", "Tout"]];
+  const NIV = { critique: ["--neg", 0], alerte: ["--warn", 1], info: ["--gris", 2] };
+
+  let D = null, cle = null, etatUI = { type: "jour", idx: 0, mode: null, ouverts: {}, nJours: 10 };
+  let couleurs = {}, personnes = [], nomP = {}, comptes = [], cpt = {};
+
+  // ---------------------------------------------------------------- chargement (inchangé depuis la V1)
+  function cleDuLien() {
+    const h = location.hash.replace(/^#/, "").split("&")[0].replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  async function dechiffrer(k, texte) {
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kMac = await crypto.subtle.importKey("raw", k.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", k.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct))); }
+    catch (e) { throw new Error("clé fausse"); }
+  }
+  async function charger() {
+    const q = new URLSearchParams(location.search), local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const essai = local && q.get("essai");                                  // essais sur ce Mac seulement (fichier en clair)
+    if (essai) { const r = await fetch(essai + "?t=" + Date.now(), { cache: "no-store" }); return r.json(); }
+    if (!cle) throw new Error("pas de clé");
+    const src = (local && q.get("source")) || DONNEES;
+    const r = await fetch(src + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+    if (!r.ok) throw new Error("données pas encore publiées (" + r.status + ")");
+    return dechiffrer(cle, await r.text());
+  }
+  async function boucle() {
+    try {
+      const x = await charger();
+      const neuf = !D || x.fait !== D.fait;
+      D = x;
+      $("msg").hidden = true; $("app").hidden = false;
+      if (neuf) dessiner();
+    } catch (e) {
+      if (!D) $("msg").innerHTML = e.message === "pas de clé" ? "Ouvre cette page avec <b>le lien complet</b> (celui qui finit par une longue clé après le #)." :
+        e.message === "clé fausse" ? "<b>La clé du lien n'est pas la bonne.</b> Reprends le lien complet." : "Chargement impossible : " + esc(e.message) + ". Nouvel essai dans une minute.";
+      else console.error(e);
+    }
+    setTimeout(boucle, RAFRAICHIR_MS);
+  }
+
+  // ---------------------------------------------------------------- outils
+  function preparer() {
+    personnes = D.personnes || [];
+    nomP = {}; couleurs = {};
+    personnes.forEach((p, i) => { const k = p.slot || (i + 1); nomP[p.id] = p.nom; couleurs[p.id] = k >= 1 && k <= 8 ? "var(--c" + k + ")" : "var(--gris)"; });
+    comptes = D.comptes || []; cpt = {};
+    comptes.forEach(c => { cpt[c.id] = c; });
+  }
+  const couleurCompte = c => (c && c.titulaire && couleurs[c.titulaire]) || (c && c.regle === "simon" ? couleurs.simon : "var(--gris)");
+  const qui = c => c.titulaire_nom || (c.regle === "simon" ? "Simon" : (c.nom || c.id).split(" · ")[0]);
+  const av = (coul, n) => `<span class="av" style="color:${coul}">${esc(String(n || "?").slice(0, 1).toUpperCase())}</span>`;
+  const pt = coul => `<span class="pt" style="background:${coul}"></span>`;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const coulReelle = v => v && v.indexOf("var(") === 0 ? css(v.slice(4, -1)) : v;
+  const auj = () => D.jour_courant;
+  const parId = id => (D.problemes || []).filter(p => !p.resolu && p.compte === id);
+  const macPanne = mac => (D.problemes || []).find(p => !p.resolu && p.id === "mac_injoignable:" + mac);
+  const nomCompte = id => cpt[id] ? qui(cpt[id]) : id;
+  const detailAttente = j => (j && j.attente || []).map(id => { const l = (j.comptes || {})[id] || {}; return l.provisoire != null ? `${nomCompte(id)} (${eur(l.provisoire)} pas final)` : `${nomCompte(id)} (rien reçu)`; }).join(", ");
+  const attentePeriode = p => { const m = {}; for (const a of (p && p.attente) || []) for (const id of a.comptes || []) (m[id] = m[id] || []).push(a.date); return m; };
+  const texteAttentePeriode = p => Object.entries(attentePeriode(p)).map(([id, ds]) => p.type === "jour" ? nomCompte(id) : `${nomCompte(id)} (${ds.map(ddm).join(", ")})`).join(", ");
+  const cevMoy = a => a && a.cev_connus ? a.cev_total / a.cev_connus : null;
+
+  function agreger(jours) {
+    const t = { gain: 0, tournois: 0, victoires: 0, heures: 0, buyins: 0, cev_total: 0, cev_connus: 0 }, pc = {}, pp = {};
+    let gainVu = false;
+    for (const j of jours) {
+      for (const [id, l] of Object.entries(j.comptes || {})) {
+        if (l.attente) continue;
+        const a = pc[id] || (pc[id] = { gain: 0, tournois: 0, victoires: 0, heures: 0, buyins: 0, cev_total: 0, cev_connus: 0 });
+        if (l.gain != null) { a.gain += l.gain; t.gain += l.gain; gainVu = true; }
+        for (const k of ["tournois", "victoires", "heures", "buyins", "cev_total", "cev_connus"]) { a[k] += l[k] || 0; t[k] += l[k] || 0; }
+      }
+      for (const [p, x] of Object.entries(j.parts || {})) pp[p] = (pp[p] || 0) + x;
+    }
+    if (!gainVu) t.gain = null;
+    return { total: t, comptes: pc, parts: pp, attente: jours.filter(j => (j.attente || []).length).map(j => ({ date: j.date, comptes: j.attente })) };
+  }
+  function periodes(type) {
+    if (type === "tout") {
+      const js = D.jours || [];
+      if (!js.length) return [];
+      const a = agreger(js);
+      return [{ cle: "tout", type: "tout", libelle: "depuis le début", debut: js[0].date, fin: js[js.length - 1].date, en_cours: true, total: a.total, comptes: a.comptes, parts: a.parts, attente: a.attente, avec_parts: Object.keys(a.parts).length > 0 }];
+    }
+    return (D.periodes || {})[type] || [];
+  }
+  const periode = () => { const L = periodes(etatUI.type); if (etatUI.idx >= L.length) etatUI.idx = Math.max(0, L.length - 1); return L[etatUI.idx] || null; };
+  const nomPeriode = p => !p ? "" : p.type === "jour" ? (p.cle === auj() ? "aujourd'hui" : "le " + dcourt(p.cle)) : p.type === "tout" ? "depuis le début" : p.libelle;
+
+  // ---------------------------------------------------------------- dessin
+  function dessiner() {
+    preparer();
+    dessinerTete(); dessinerHero(); dessinerDette(); dessinerPoche(); dessinerComptes(); dessinerG1(); dessinerG2();
+    dessinerSoldes(); dessinerAlertes(); dessinerRobots(); dessinerJours(); dessinerRegles(); dessinerPied();
+  }
+  function dessinerPeriode() { dessinerTete(); dessinerHero(); dessinerPoche(); dessinerComptes(); dessinerG1(); }
+
+  function dessinerTete() {
+    const enJeu = Object.values(D.direct || {}).filter(d => d.etat === "EN_SESSION").length;
+    $("sous").innerHTML = `${esc(dlong(auj()))} · données de ${hm(D.maj_donnees)}<span class="pouls ${enJeu ? "" : "eteint"}"></span>${enJeu ? enJeu + " robot" + (enJeu > 1 ? "s" : "") + " en jeu" : "aucun robot en jeu"}`;
+    $("seg").innerHTML = TYPES.map(([k, n]) => `<button type="button" data-t="${k}" aria-pressed="${k === etatUI.type}">${n}</button>`).join("");
+    $("seg").querySelectorAll("button").forEach(b => b.onclick = () => { etatUI.type = b.dataset.t; etatUI.idx = 0; dessinerPeriode(); });
+    const L = periodes(etatUI.type);
+    $("avant").disabled = etatUI.idx >= L.length - 1; $("apres").disabled = etatUI.idx <= 0;
+    $("avant").onclick = () => { etatUI.idx++; dessinerPeriode(); };
+    $("apres").onclick = () => { etatUI.idx--; dessinerPeriode(); };
+  }
+
+  function dessinerHero() {
+    const p = periode(), t = (p && p.total) || {};
+    const titre = !p ? "Pas encore de données" : p.type === "jour" ? (p.cle === auj() ? "Résultat aujourd'hui" : "Résultat du " + dcourt(p.cle)) :
+      p.type === "tout" ? "Résultat depuis le début" : "Résultat · " + p.libelle;
+    let chips = `<span>${esc(titre)}</span>`;
+    if (p && p.type !== "jour" && p.type !== "tout") chips += `<span class="chip">${ddm(p.debut)} → ${ddm(p.fin)}${p.en_cours ? " · en cours" : ""}</span>`;
+    if (p && p.ecart != null && p.avant) chips += `<span class="chip ${cls(p.ecart)}">${p.ecart >= 0 ? "↗" : "↘"} ${eurA(p.ecart)} vs ${p.type === "jour" ? "la veille" : "avant"}</span>`;
+    const ta = texteAttentePeriode(p);
+    if (ta) chips += `<span class="chip warn" title="Chiffres pas encore finaux : ils n'entrent dans aucun total ni aucune part tant qu'ils ne sont pas arrivés.">en attente : ${esc(ta)}</span>`;
+    $("res-l").innerHTML = chips;
+    const g = t.gain;
+    if (g == null) $("gros").innerHTML = `<span>–</span>`;
+    else { const s = eur(g), k = s.lastIndexOf(","); $("gros").innerHTML = `<span class="${g < -0.004 ? "neg" : ""}">${s.slice(0, k)}</span><span class="dec ${g < -0.004 ? "neg" : ""}">${s.slice(k)}</span>`; }
+    const fv = t.tournois ? t.victoires / t.tournois : null, eh = t.heures ? (g || 0) / t.heures : null;
+    const roi = t.buyins ? (g || 0) / t.buyins : null, cev = cevMoy(t);
+    const st = [["Tournois", f0.format(t.tournois || 0)], ["Gagnés", pct(fv)], ["Temps de jeu", heures(t.heures)], ["Par heure", eh != null ? eur(eh) : "–"],
+      ["ROI", roi != null ? signe(roi) + f1.format(Math.abs(roi * 100)) + " %" : "–"], ["cEV", cev != null ? f0.format(cev) : "–"]];
+    $("stats").innerHTML = st.map(s => `<div><span>${s[0]}</span><b class="num">${s[1]}</b></div>`).join("");
+  }
+
+  function dessinerDette() {
+    const c = D.ctv || {};
+    if (!c.depart) { $("dette").hidden = true; return; }
+    $("dette").hidden = false;
+    const k = Math.max(0, Math.min(1, c.rembourse_pct || 0));
+    $("dette").innerHTML = `<div class="dette-h"><span>Dette CTV</span><em>Carnet</em></div>
+      <div class="v num"><small>Reste à rembourser</small>${eurA(c.reste)}</div>
+      <div style="display:grid;gap:8px"><div class="jauge"><i style="width:${(k * 100).toFixed(1)}%"></i></div>
+        <div class="bas"><span>${f1.format(k * 100)} % remboursé</span><span>départ ${eurA(c.depart)} au ${ddm(c.dette_au)}</span></div></div>
+      <div class="det"><div><span>Gagné pour CTV</span><b class="num ${cls(c.gagne)}">${eur(c.gagne)}</b></div>
+        <div><span>Rythme</span><b class="num">${c.rythme_jour ? eur(c.rythme_jour) + " / jour" : "dans quelques jours"}</b></div>
+        <div><span>Fin estimée</span><b class="num">${c.fin_estimee ? ddm(c.fin_estimee) + "/" + String(c.fin_estimee).slice(2, 4) : "–"}</b></div></div>
+      ${c.verse ? `<div class="apres">Déjà versé à CTV : ${eurA(c.verse)}.</div>` : ""}`;
+  }
+
+  function roleTxt(p) {
+    const R = D.regles || [];
+    if (p.role === "titulaire") { const r = R.find(r => r.parts && r.parts.titulaire != null); return r ? `titulaire, ${r.parts.titulaire} % de son compte` : "titulaire"; }
+    const L = R.filter(r => r.parts && r.parts[p.id] != null).map(r => `${r.parts[p.id]} % ${r.id === "simon" ? "du compte de Simon" : "des comptes titulaires"}`);
+    return L.join(", ") || p.role || "";
+  }
+  function dessinerPoche() {
+    const p = periode(), parts = (p && p.parts) || {}, aParts = Object.keys(parts).length > 0;
+    $("rep-p").textContent = nomPeriode(p);
+    const tot = personnes.reduce((a, x) => a + Math.abs(parts[x.id] || 0), 0) || 1;
+    $("barre").innerHTML = aParts ? personnes.map(x => { const w = Math.abs(parts[x.id] || 0) / tot * 100; return w > .3 ? `<i style="flex:${w.toFixed(2)};background:${couleurs[x.id]};opacity:${(parts[x.id] || 0) < 0 ? .45 : 1}"></i>` : ""; }).join("") : "";
+    const att = attentePeriode(p), toutPos = personnes.every(x => (parts[x.id] || 0) >= 0);
+    const enAttente = pid => comptes.some(c => att[c.id] && (c.titulaire === pid));
+    $("liste").innerHTML = personnes.map(x => {
+      const v = parts[x.id] || 0;
+      const sous = !aParts ? `parts dès le ${ddm(D.debut_parts)}` : roleTxt(x) + (enAttente(x.id) ? " · un compte en attente" : "");
+      return `<div class="ligne">${av(couleurs[x.id], x.nom)}<span class="qui">${esc(x.nom)}<small>${esc(sous)}</small></span>
+        <span class="pc num">${aParts && toutPos ? f0.format(v / tot * 100) + " %" : ""}</span><span class="v num ${aParts ? cls(v) : "nul"}">${aParts ? eur(v) : "–"}</span></div>`;
+    }).join("");
+  }
+
+  function dessinerComptes() {
+    const p = periode();
+    $("pc-p").textContent = nomPeriode(p);
+    if (!p) { $("comptes").innerHTML = ""; $("bilan").innerHTML = ""; return; }
+    const t = p.total || {}, att = attentePeriode(p);
+    const lignes = comptes.filter(c => (p.comptes || {})[c.id] && ((p.comptes[c.id].tournois || 0) > 0 || p.comptes[c.id].gain)).map(c => {
+      const a = p.comptes[c.id], tv = a.tournois ? a.victoires / a.tournois : null, ce = cevMoy(a), roi = a.buyins ? a.gain / a.buyins : null;
+      return `<tr><td><div class="robot">${av(couleurCompte(c), qui(c))}<div>${esc(c.nom)}<small>${esc(c.appareil || "")}${att[c.id] ? ` · <span class="attente">en attente ${att[c.id].map(ddm).join(", ")}</span>` : ""}</small></div></div></td>
+        <td class="d num ${cls(a.gain)}"><b>${eur(a.gain)}</b></td><td class="d num">${f0.format(a.tournois || 0)}</td><td class="d num opt">${pct(tv)}</td>
+        <td class="d num opt">${roi != null ? signe(roi) + f1.format(Math.abs(roi * 100)) + " %" : "–"}</td><td class="d num opt ${ce != null && ce < 55 ? "cev-bas" : ""}">${ce != null ? f0.format(ce) : "–"}</td>
+        <td class="d num opt">${heures(a.heures)}</td><td class="d num opt">${a.heures ? eur(a.gain / a.heures) : "–"}</td></tr>`;
+    });
+    comptes.filter(c => att[c.id] && !((p.comptes || {})[c.id] && (p.comptes[c.id].tournois || p.comptes[c.id].gain))).forEach(c => {
+      lignes.push(`<tr><td><div class="robot">${av(couleurCompte(c), qui(c))}<div>${esc(c.nom)}<small>${esc(c.appareil || "")}</small></div></div></td><td class="d attente" colspan="7">en attente ${p.type === "jour" ? "" : att[c.id].map(ddm).join(", ")}</td></tr>`);
+    });
+    if (!lignes.length) { $("comptes").innerHTML = `<tbody><tr><td class="nul">Rien joué sur cette période.</td></tr></tbody>`; $("bilan").innerHTML = ""; return; }
+    const fv = t.tournois ? t.victoires / t.tournois : null, roi = t.buyins ? (t.gain || 0) / t.buyins : null, ce = cevMoy(t);
+    $("comptes").innerHTML = `<thead><tr><th>Compte</th><th class="d">Gain</th><th class="d">Tournois</th><th class="d opt">Gagnés</th><th class="d opt">ROI</th><th class="d opt">cEV</th><th class="d opt">Temps</th><th class="d opt">€ / heure</th></tr></thead><tbody>${lignes.join("")}</tbody>
+      <tfoot><tr><td>Total</td><td class="d num ${cls(t.gain)}">${eur(t.gain)}</td><td class="d num">${f0.format(t.tournois || 0)}</td><td class="d num opt">${pct(fv)}</td>
+      <td class="d num opt">${roi != null ? signe(roi) + f1.format(Math.abs(roi * 100)) + " %" : "–"}</td><td class="d num opt">${ce != null ? f0.format(ce) : "–"}</td><td class="d num opt">${heures(t.heures)}</td><td class="d num opt">${t.heures ? eur((t.gain || 0) / t.heures) : "–"}</td></tr></tfoot>`;
+    $("bilan").innerHTML = bilanTexte(p);
+  }
+  function bilanTexte(p) {
+    const t = p.total || {}, ta = texteAttentePeriode(p), L = [];
+    if (!t.tournois) return ta ? `<p>Chiffres en attente : <b>${esc(ta)}</b>.</p>` : "";
+    if (ta) L.push(`<p><b>Partiel</b> : ${esc(ta)} pas encore arrivé (Mac injoignable ou dernier envoi avant la fin du jour). Ces chiffres s'ajouteront tout seuls à leur arrivée.</p>`);
+    const cs = Object.entries(p.comptes || {}).filter(([, a]) => a.tournois > 0 && a.gain != null).sort((a, b) => b[1].gain - a[1].gain);
+    if (cs.length > 1) {
+      const [bi, ba] = cs[0], [wi, wa] = cs[cs.length - 1];
+      L.push(`<p>Meilleur compte : <b>${esc((cpt[bi] || {}).nom || bi)}</b> (${eur(ba.gain)}).${wa.gain < 0 ? ` Le plus bas : <b>${esc((cpt[wi] || {}).nom || wi)}</b> (${eur(wa.gain)}).` : ""}</p>`);
+    }
+    if (p.meilleur && p.type !== "jour") L.push(`<p>Meilleur jour : <b>${dcourt(p.meilleur.date)}</b> (${eur(p.meilleur.gain)})${p.pire && p.pire.date !== p.meilleur.date ? `, pire jour : ${dcourt(p.pire.date)} (${eur(p.pire.gain)})` : ""}.</p>`);
+    const cev = cevMoy(t);
+    if (cev != null) L.push(`<p>Qualité de jeu (cEV) : <b>${f0.format(cev)}</b> jetons par tournoi ${cev >= 55 ? "(au-dessus du repère 55 : le jeu est bon, la variance fait le reste)" : "(sous le repère 55 : à regarder)"}.</p>`);
+    return L.join("");
+  }
+
+  // ---------------------------------------------------------------- graphes
+  function echelle(mn, mx, n) {
+    if (mn === mx) { mn -= 1; mx += 1; }
+    const brut = (mx - mn) / n, p = Math.pow(10, Math.floor(Math.log10(brut))), m = brut / p;
+    const pas = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+    const a = Math.floor(mn / pas) * pas, b = Math.ceil(mx / pas) * pas, ticks = [];
+    for (let v = a; v <= b + pas / 2; v += pas) ticks.push(+v.toFixed(6));
+    return { a, b, ticks };
+  }
+  function grille(sc, Y, larg, W) {
+    return sc.ticks.map(v => `<line x1="0" x2="${larg}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${Math.abs(v) < 1e-9 ? css("--grille0") : css("--grille")}" stroke-width="1"${Math.abs(v) < 1e-9 ? "" : ' stroke-dasharray="2 4"'}/>` +
+      `<text x="${W}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="${css("--muted")}">${Math.abs(v) < 1e-9 ? "0 €" : eurC(v)}</text>`).join("");
+  }
+  function etiquettes(dates, X, H) {
+    const n = dates.length, idx = n <= 2 ? [...Array(n).keys()] : [0, Math.floor((n - 1) / 2), n - 1];
+    return idx.map((i, k) => `<text x="${X(i).toFixed(1)}" y="${H - 2}" font-size="11" fill="${css("--muted")}" text-anchor="${n > 2 ? (k === 0 ? "start" : k === 2 ? "end" : "middle") : "middle"}">${dates[i] === auj() ? "aujourd'hui" : dcourt(dates[i])}</text>`).join("");
+  }
+  function placer(b, zone, x, y) {
+    const W = zone.clientWidth, bw = b.offsetWidth, bh = b.offsetHeight;
+    let left = x + 16; if (left + bw > W) left = x - bw - 16; if (left < 0) left = Math.max(0, Math.min(W - bw, x - bw / 2));
+    let top = y - bh / 2; top = Math.max(-8, Math.min(top, zone.clientHeight - bh + 8));
+    b.style.left = left + "px"; b.style.top = top + "px";
+  }
+  const evXY = (ev, el) => { const r = el.getBoundingClientRect(), s = ev.touches ? ev.touches[0] : ev; return [s.clientX - r.left, s.clientY - r.top, r]; };
+
+  function joursDuGraphe() {
+    const p = periode(), js = D.jours || [];
+    if (!p || p.type === "jour") { const fin = p ? js.findIndex(j => j.date === p.cle) : js.length - 1; return js.slice(Math.max(0, (fin < 0 ? js.length - 1 : fin) - 13), (fin < 0 ? js.length - 1 : fin) + 1); }
+    return js.filter(j => j.date >= p.debut && j.date <= p.fin);
+  }
+  function dessinerG1() {
+    const svg = $("svg1"), zone = $("g1"), js = joursDuGraphe(), p = periode();
+    if (!js.length) { svg.innerHTML = ""; return; }
+    const W = svg.clientWidth || 640, H = Math.max(200, svg.clientHeight || 240), bas = 20, droite = 52, n = js.length;
+    const v = js.map(j => (j.total || {}).gain || 0);
+    const sc = echelle(Math.min(0, ...v), Math.max(0, ...v), 3);
+    const larg = W - droite, pas = larg / n, bw = Math.max(2, Math.min(34, pas * .62));
+    const Y = x => 6 + (H - bas - 6) * (1 - (x - sc.a) / (sc.b - sc.a)), y0 = Y(0);
+    const vise = p && p.type === "jour" ? p.cle : null;
+    let b = "";
+    js.forEach((j, i) => {
+      const g = v[i], h = Math.max(g ? 2 : 0, Math.abs(Y(g) - y0)), x = i * pas + (pas - bw) / 2, y = g >= 0 ? y0 - h : y0;
+      const fort = vise ? j.date === vise : j.en_cours;
+      b += `<rect class="b" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${fort ? "url(#hol)" : g >= 0 ? "url(#arg)" : css("--bneg")}" fill-opacity="${fort || g >= 0 ? 1 : css("--bneg-o")}"/>`;
+    });
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = `<defs><linearGradient id="hol" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${css("--or")}"/><stop offset="1" stop-color="${css("--or-2")}"/></linearGradient>
+      <linearGradient id="arg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${css("--ar1")}"/><stop offset="1" stop-color="${css("--ar2")}"/></linearGradient></defs>` +
+      grille(sc, Y, larg, W) + b + etiquettes(js.map(j => j.date), i => i * pas + pas / 2, H) + `<rect id="z1" x="0" y="0" width="${larg}" height="${H}" fill="transparent"/>`;
+    const bulle = $("bulle1"), barres = svg.querySelectorAll(".b");
+    const montrer = ev => {
+      const [cx, cy, r] = evXY(ev, svg), i = Math.max(0, Math.min(n - 1, Math.floor(cx * W / r.width / pas))), j = js[i];
+      barres.forEach((el, k) => { el.style.filter = k === i ? "brightness(1.15) drop-shadow(0 0 6px rgba(138,107,255,.5))" : ""; });
+      let h = `<div class="t">${dcourt(j.date)}${j.en_cours ? " · en cours" : ""}</div><div class="l"><span>Total</span><b class="${cls(j.total.gain)}">${eur(j.total.gain)}</b></div>`;
+      for (const c of comptes) { const l = (j.comptes || {})[c.id]; if (l && l.attente) h += `<div class="l"><span>${pt(couleurCompte(c))}${esc(c.nom)}</span><b class="attente">en attente</b></div>`; else if (l && (l.tournois || l.gain)) h += `<div class="l"><span>${pt(couleurCompte(c))}${esc(c.nom)}</span><b class="${cls(l.gain)}">${eur(l.gain)}</b></div>`; }
+      if (j.avec_parts && Object.keys(j.parts || {}).length) { h += `<div class="sep"></div>`; for (const x of personnes) if (j.parts[x.id] != null) h += `<div class="l"><span>${pt(couleurs[x.id])}${esc(x.nom)}</span><b class="${cls(j.parts[x.id])}">${eur(j.parts[x.id])}</b></div>`; }
+      bulle.innerHTML = h; bulle.classList.add("vu");
+      placer(bulle, zone, 14 + (i * pas + pas / 2) * r.width / W, cy);
+    };
+    const z = $("z1");
+    z.addEventListener("mousemove", montrer); z.addEventListener("touchstart", montrer, { passive: true }); z.addEventListener("touchmove", montrer, { passive: true });
+    z.addEventListener("mouseleave", () => { bulle.classList.remove("vu"); barres.forEach(el => { el.style.filter = ""; }); });
+  }
+
+  function series2() {
+    const js = D.jours || [];
+    if (etatUI.mode === "personnes") {
+      const jp = js.filter(j => j.avec_parts);
+      return { dates: jp.map(j => j.date), series: personnes.map(p => { let c = 0; return { id: p.id, nom: p.nom, couleur: couleurs[p.id], tiret: false, v: jp.map(j => (c += (j.parts || {})[p.id] || 0)) }; }) };
+    }
+    const vus = {};
+    return { dates: js.map(j => j.date), series: comptes.map(c => {
+      let s = 0, commence = false;
+      const v = js.map(j => { const l = (j.comptes || {})[c.id]; if (l && !l.attente && (l.tournois || l.gain)) commence = true; if (l && !l.attente && l.gain != null) s += l.gain; return commence ? s : null; });
+      const coul = couleurCompte(c); vus[coul] = (vus[coul] || 0) + 1;
+      return { id: c.id, nom: c.nom, couleur: coul, tiret: vus[coul] > 1, v };
+    }).filter(s => s.v.some(x => x != null)) };
+  }
+  function dessinerG2() {
+    if (!etatUI.mode) etatUI.mode = (D.jours || []).filter(j => j.avec_parts).length >= 2 ? "personnes" : "comptes";
+    document.querySelectorAll("#g2-mode button").forEach(b => { b.setAttribute("aria-pressed", b.dataset.m === etatUI.mode); b.onclick = () => { etatUI.mode = b.dataset.m; dessinerG2(); }; });
+    const svg = $("svg2"), zone = $("g2"), { dates, series } = series2();
+    const fin = s => { for (let i = s.v.length - 1; i >= 0; i--) if (s.v[i] != null) return i; return -1; };
+    $("legende").innerHTML = series.map(s => { const i = fin(s); return `<span><i style="background:${s.tiret ? `repeating-linear-gradient(90deg,${s.couleur} 0 4px,transparent 4px 7px)` : s.couleur}"></i>${esc(s.nom)}${i >= 0 ? ` <b class="num ${cls(s.v[i])}">${eur(s.v[i])}</b>` : ""}</span>`; }).join("");
+    if (dates.length < 2) {
+      svg.innerHTML = ""; $("bulle2").classList.remove("vu");
+      $("legende").innerHTML += `<span style="color:var(--muted)">${etatUI.mode === "personnes" ? `La courbe de chacun se dessine à partir du ${ddm(D.debut_parts)}, dès le 2e jour de parts.` : "Pas encore assez de jours."}</span>`;
+      return;
+    }
+    const W = svg.clientWidth || 640, H = Math.max(220, svg.clientHeight || 280), bas = 20, droite = 52, n = dates.length;
+    const tout = series.flatMap(s => s.v.filter(x => x != null));
+    const sc = echelle(Math.min(0, ...tout), Math.max(0, ...tout), 4), larg = W - droite - 8;
+    const X = i => larg * i / (n - 1), Y = v => 8 + (H - bas - 8) * (1 - (v - sc.a) / (sc.b - sc.a));
+    let l = "", aire = "";
+    const haut = series.slice().sort((a, b) => (b.v[fin(b)] || 0) - (a.v[fin(a)] || 0))[0];
+    for (const se of series) {
+      let d = "", on = false;
+      se.v.forEach((v, i) => { if (v == null) { on = false; return; } d += (on ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1); on = true; });
+      if (se === haut) {                                                         // reflet sous la courbe la plus haute
+        const i0 = se.v.findIndex(v => v != null), i1 = fin(se);
+        aire = `<path d="${d} L${X(i1).toFixed(1)} ${Y(0).toFixed(1)} L${X(i0).toFixed(1)} ${Y(0).toFixed(1)}Z" fill="url(#aire)" opacity=".5"/>`;
+        l = `<defs><linearGradient id="aire" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${coulReelle(se.couleur)}" stop-opacity=".22"/><stop offset="1" stop-color="${coulReelle(se.couleur)}" stop-opacity="0"/></linearGradient></defs>` + l;
+      }
+      l += `<path d="${d}" fill="none" stroke="${css("--halo")}" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;
+      l += `<path d="${d}" fill="none" stroke="${se.couleur}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"${se.tiret ? ' stroke-dasharray="6 4"' : ""}/>`;
+      const i = fin(se); if (i >= 0) l += `<circle cx="${X(i).toFixed(1)}" cy="${Y(se.v[i]).toFixed(1)}" r="4.5" fill="${se.couleur}" stroke="${css("--halo")}" stroke-width="2.5"/>`;
+    }
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = grille(sc, Y, larg, W) + aire + l + etiquettes(dates, X, H) +
+      `<line id="v2" y1="8" y2="${H - bas}" stroke="${css("--vise")}" stroke-dasharray="3 3" opacity="0"/><g id="pts2"></g><rect id="z2" x="0" y="0" width="${larg}" height="${H}" fill="transparent"/>`;
+    const bulle = $("bulle2"), vise = $("v2"), pts = $("pts2");
+    const montrer = ev => {
+      const [cx, cy, r] = evXY(ev, svg), i = Math.max(0, Math.min(n - 1, Math.round(cx * W / r.width / (larg / (n - 1)))));
+      vise.setAttribute("x1", X(i)); vise.setAttribute("x2", X(i)); vise.setAttribute("opacity", 1);
+      const vis = series.filter(se => se.v[i] != null).sort((a, b) => b.v[i] - a.v[i]);
+      pts.innerHTML = vis.map(se => `<circle cx="${X(i).toFixed(1)}" cy="${Y(se.v[i]).toFixed(1)}" r="5" fill="${se.couleur}" stroke="${css("--halo")}" stroke-width="2.5"/>`).join("");
+      bulle.innerHTML = `<div class="t">${dates[i] === auj() ? "Aujourd'hui" : dcourt(dates[i])}</div>` + vis.map(se => `<div class="l"><span>${pt(se.couleur)}${esc(se.nom)}</span><b class="num ${cls(se.v[i])}">${eur(se.v[i])}</b></div>`).join("");
+      bulle.classList.add("vu");
+      placer(bulle, zone, 14 + X(i) * r.width / W, cy);
+    };
+    const z = $("z2");
+    z.addEventListener("mousemove", montrer); z.addEventListener("touchstart", montrer, { passive: true }); z.addEventListener("touchmove", montrer, { passive: true });
+    z.addEventListener("mouseleave", () => { bulle.classList.remove("vu"); vise.setAttribute("opacity", 0); pts.innerHTML = ""; });
+  }
+
+  // ---------------------------------------------------------------- soldes, alertes, robots
+  function dessinerSoldes() {
+    const L = D.soldes || [];
+    $("soldes").innerHTML = `<div class="carte-h"><h2>Reste à verser</h2><span>depuis le ${ddm(D.debut_parts)}</span></div><div style="padding-top:8px">` +
+      (L.length ? L.map(s => `<div class="solde">${av(couleurs[s.id] || "var(--gris)", s.nom)}<span class="qui">${esc(s.nom)}<small>gagné ${eur(s.gagne)} · versé ${eurA(s.verse || 0)}</small></span>
+        <span class="v num ${cls(s.reste)}">${eur(s.reste)}<small>${s.reste < -0.004 ? "à reprendre" : "à verser"}</small></span></div>`).join("") : `<div class="vide">Rien encore.</div>`) +
+      `</div><div class="note-bas">« Versé » : l'argent déjà remis. Dis-le à Claude (« j'ai versé 20 € à Mam ») : il le note, la page et la feuille suivent. L'argent d'avant le 12/11 reste dans « Carnet - finances ».</div>`;
+  }
+  function depuis(ts) {
+    const s = Math.max(0, Date.now() / 1000 - ts);
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min";
+    if (s < 86400) return Math.floor(s / 3600) + " h " + String(Math.floor(s % 3600 / 60)).padStart(2, "0");
+    return Math.floor(s / 86400) + " j";
+  }
+  function dessinerAlertes() {
+    const L = D.problemes || [], ouv = L.filter(p => !p.resolu).sort((a, b) => (NIV[a.niveau] || NIV.info)[1] - (NIV[b.niveau] || NIV.info)[1]), ok = L.filter(p => p.resolu);
+    let h = `<div class="carte-h"><h2>À surveiller</h2><span>${ouv.length ? ouv.length + " point" + (ouv.length > 1 ? "s" : "") : "trouvés tout seuls"}</span></div><div style="padding-top:8px">`;
+    if (!ouv.length) h += `<div class="vide">✓ Rien à signaler.</div>`;
+    for (const p of ouv) h += `<div class="alerte"><i style="background:var(${(NIV[p.niveau] || NIV.info)[0]})"></i><div><b>${esc(p.titre)}</b><span class="qd">depuis ${depuis(p.premier)}</span>${p.detail ? `<p>${esc(p.detail)}</p>` : ""}${p.action ? `<p>→ ${esc(p.action)}</p>` : ""}</div></div>`;
+    h += `</div>`;
+    if (ok.length) h += `<details class="regles-ok"><summary>${ok.length} réglé${ok.length > 1 ? "s" : ""} récemment</summary>${ok.slice(0, 8).map(p => `<div>✓ ${esc(p.titre)} · il y a ${depuis(p.resolu)}</div>`).join("")}</details>`;
+    else h += `<div style="height:10px"></div>`;
+    $("alertes").innerHTML = h;
+  }
+  function dessinerRobots() {
+    const j = (D.jours || []).find(x => x.date === auj()) || null;
+    let html = "", vus = 0, enJeu = 0;
+    for (const c of comptes) {
+      const d = (D.direct || {})[c.id], l = j && (j.comptes || {})[c.id];
+      if (!d && !(l && l.tournois)) continue;
+      if (c.fin && c.fin < auj()) continue;
+      vus++;
+      const mac = (D.mac_de || {})[c.id];
+      let [k, txt] = d ? (ETATS[d.etat] || ["", d.etat || "?"]) : ["", "Pas de carte"];
+      if (mac && macPanne(mac)) { k = "panne"; txt = "Injoignable"; }
+      if (k === "jeu") enJeu++;
+      const frais = d && String(d.maj || "").slice(0, 10) === auj();            // carte d'un autre jour : ses chiffres ne sont pas ceux d'aujourd'hui
+      const sj = frais && d.jour ? d.jour : {};
+      const gain = l && l.gain != null && !l.attente ? l.gain : (l && l.provisoire != null ? l.provisoire : sj.net_eur);
+      const tn = (l && l.tournois) || sj.tournois || 0;
+      const nbPb = parId(c.id).filter(p => p.niveau !== "info").length;
+      const tables = d && d.etat === "EN_SESSION" && d.tables ? d.tables + (d.tables > 1 ? " tables" : " table") : "–";
+      const sous = [c.appareil, d ? "vu " + (frais ? "à " + hm(d.maj) : "le " + ddm(String(d.maj || "").slice(0, 10))) : "", d && d.bankroll != null ? "bankroll " + f0.format(d.bankroll) + " €" : ""].filter(Boolean).join(" · ");
+      const gainTxt = l && l.attente ? `<span class="attente">${l.provisoire != null ? eur(l.provisoire) + " pas final" : "en attente"}</span>` : gain == null ? `<span class="nul">–</span>` : `<span class="${cls(gain)}">${eur(gain)}</span>`;
+      html += `<tr><td><div class="robot">${av(couleurCompte(c), qui(c))}<div>${esc(c.nom)}<small>${esc(sous)}<span class="etat-m"> · ${esc(txt)}</span>${nbPb ? ` · <span class="attente">⚠ ${nbPb}</span>` : ""}</small></div></div></td>
+        <td class="opt"><span class="etat ${k}">${esc(txt)}</span></td><td class="d num opt">${tables}</td><td class="d num opt">${tn ? f0.format(tn) : "–"}</td><td class="d num">${gainTxt}</td></tr>`;
+    }
+    $("robots").innerHTML = html ? `<thead><tr><th>Robot</th><th class="opt">État</th><th class="d opt">Tables</th><th class="d opt">Tournois</th><th class="d">Aujourd'hui</th></tr></thead><tbody>${html}</tbody>` : `<tbody><tr><td class="nul">Aucun robot aujourd'hui.</td></tr></tbody>`;
+    $("robots-note").textContent = vus ? `${enJeu} en jeu sur ${vus}` : "en direct";
+  }
+
+  // ---------------------------------------------------------------- jour par jour, règles, pied
+  function dessinerJours() {
+    const js = [...(D.jours || [])].reverse().slice(0, etatUI.nJours);
+    const lignes = js.map(j => {
+      const t = j.total || {}, ouvert = !!etatUI.ouverts[j.date], joue = t.tournois || t.gain;
+      const mini = comptes.filter(c => (j.comptes || {})[c.id] && (j.comptes[c.id].tournois || 0) > 0).map(c => pt(couleurCompte(c))).join("");
+      let r = `<tr class="jr" tabindex="0" data-d="${j.date}" aria-expanded="${ouvert}"><td>${dcourt(j.date)}${j.en_cours ? `<span class="badge">en cours</span>` : ""}<span class="mini">${mini}</span>${(j.attente || []).length ? ` <span class="attente" title="${esc(detailAttente(j))}">· attente</span>` : ""}</td>
+        <td class="d num opt">${t.tournois ? f0.format(t.tournois) : ""}</td><td class="d num"><span class="${joue ? cls(t.gain) : "nul"}">${joue ? eur(t.gain) : "repos"}</span></td></tr>`;
+      if (ouvert) r += `<tr class="jd"><td colspan="3">${detailJour(j)}</td></tr>`;
+      return r;
+    }).join("");
+    $("jours").innerHTML = `<thead><tr><th>Jour</th><th class="d opt">Tournois</th><th class="d">Résultat</th></tr></thead><tbody>${lignes}</tbody>`;
+    const basculer = tr => { const d = tr.dataset.d; etatUI.ouverts[d] = !etatUI.ouverts[d]; dessinerJours(); };
+    $("jours").querySelectorAll(".jr").forEach(tr => { tr.onclick = () => basculer(tr); tr.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); basculer(tr); } }; });
+    $("plus-jours").hidden = (D.jours || []).length <= etatUI.nJours;
+    $("plus-jours").onclick = () => { etatUI.nJours += 14; dessinerJours(); };
+  }
+  function detailJour(j) {
+    let h = "";
+    for (const c of comptes) {
+      const l = (j.comptes || {})[c.id];
+      if (!l || !(l.tournois || l.gain || l.attente)) continue;
+      h += `<h4>${pt(couleurCompte(c))}${esc(c.nom)} : <span class="${cls(l.gain)}">${l.attente ? "" : eur(l.gain)}</span><small>${l.attente ? (l.provisoire != null ? eur(l.provisoire) + " pas final, pas encore compté" : "en attente, rien reçu") : `${f0.format(l.tournois || 0)} tournois · ${heures(l.heures)}${l.cev_connus ? " · cEV " + f0.format(l.cev_total / l.cev_connus) : ""}`}</small></h4>`;
+      if (l.attente) continue;
+      const pc = l.parts || {};
+      if (!Object.keys(pc).length) { h += `<div class="f"><span class="nul">${j.avec_parts ? "pas de règle de partage" : "avant le " + ddm(D.debut_parts) + " : pas de parts"}</span><span></span></div>`; continue; }
+      h += `<div class="f">` + Object.entries(pc).map(([p, x]) => { const pcent = l.gain ? x / l.gain * 100 : ((c.pourcentages || {})[p] || 0); return `<span>${pt(couleurs[p] || "var(--gris)")} ${esc(nomP[p] || p)} · ${eur(l.gain)} × ${f0.format(pcent)} %</span><span><b class="${cls(x)}">${eur(x)}</b></span>`; }).join("") + `</div>`;
+    }
+    if (j.avec_parts && Object.keys(j.parts || {}).length) {
+      h += `<h4>Total du jour par personne</h4><div class="f">` + personnes.filter(p => j.parts[p.id] != null).map(p => `<span>${pt(couleurs[p.id])} ${esc(p.nom)}</span><span><b class="${cls(j.parts[p.id])}">${eur(j.parts[p.id])}</b></span>`).join("") + `</div>`;
+    }
+    return h || `<span class="nul">Rien joué ce jour-là.</span>`;
+  }
+  function dessinerRegles() {
+    $("regles-note").textContent = `depuis le ${ddm(D.debut_parts)} · un jour en perte, chacun perd sa part`;
+    $("regles").innerHTML = (D.regles || []).map(r => {
+      const membres = comptes.filter(c => c.regle === r.id && !(c.fin && c.fin < auj()));
+      const coul = p => p === "titulaire" ? "linear-gradient(90deg,var(--c3),var(--c4),var(--c5))" : (couleurs[p] || "var(--gris)");
+      const nom = p => p === "titulaire" ? "Titulaire" : (nomP[p] || p);
+      return `<div class="regle"><div class="nom">${esc(r.nom)}</div>
+        <div class="empile">${Object.entries(r.parts).map(([p, x]) => `<div style="flex:${x};background:${coul(p)}" title="${esc(nom(p))} ${x} %">${x >= 15 ? x + " %" : ""}</div>`).join("")}</div>
+        <div class="leg-r">${Object.entries(r.parts).map(([p, x]) => `<span><span class="pt" style="background:${coul(p)}"></span>${esc(nom(p))} <b>${x} %</b></span>`).join("")}</div>
+        <div class="qui-sont">Comptes : ${membres.map(c => esc(c.nom)).join(", ") || "aucun"}</div>${r.pourquoi ? `<div class="qui-sont">${esc(r.pourquoi)}</div>` : ""}</div>`;
+    }).join("");
+  }
+  function dessinerPied() {
+    const f = D.feuille || {};
+    $("pied").innerHTML = `${f.url ? `<a class="bouton-feuille" href="${esc(f.url)}" target="_blank" rel="noopener">▦ Ouvrir le Google Sheet (tous les calculs)</a><br>` : ""}
+      Chiffres de jeu lus à ${hm(D.maj_donnees)} · page faite à ${hm(D.fait)} · se met à jour toute seule chaque minute<br>
+      ${D.controle && D.controle.ok ? "✓ Contrôle : chaque jour, la somme des parts = la somme des gains" : `<b style="color:var(--neg)">Contrôle des parts en échec</b>`}`;
+  }
+
+  let minuterie = null;
+  window.addEventListener("resize", () => { clearTimeout(minuterie); minuterie = setTimeout(() => { if (D) { dessinerG1(); dessinerG2(); } }, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (D) { dessinerG1(); dessinerG2(); } });
+  cle = cleDuLien();
+  window.addEventListener("hashchange", () => { cle = cleDuLien(); D = null; boucle(); });
+  boucle();
+})();
+</script>
+</body>
+</html>

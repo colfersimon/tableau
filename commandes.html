@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Carnet commandes</title>
+<style>
+:root { --fond:#f4f2ee; --carte:#fff; --encre:#1d1d1b; --doux:#6b6862; --ligne:#e3dfd7; --vert:#1f7a4d; --jaune:#b7791f; --rouge:#b3261e; --bleu:#2f5d8a; }
+@media (prefers-color-scheme: dark) { :root { --fond:#141414; --carte:#1f1f1f; --encre:#f0eee9; --doux:#a19d95; --ligne:#333; --vert:#4cc38a; --jaune:#e0a84a; --rouge:#f07167; --bleu:#7fb0e0; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--fond); color:var(--encre); font:16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.page { max-width:760px; margin:0 auto; padding:16px; }
+header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+h1 { font-size:22px; margin:0; }
+.liens { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 16px; }
+.liens a, .liens button { font:inherit; font-size:14px; padding:8px 12px; border-radius:8px; border:1px solid var(--ligne); background:var(--carte); color:var(--encre); text-decoration:none; cursor:pointer; }
+.msg { padding:10px 12px; border-radius:8px; background:var(--carte); border:1px solid var(--ligne); margin-bottom:12px; }
+.mac { background:var(--carte); border:1px solid var(--ligne); border-radius:12px; padding:14px; margin-bottom:12px; }
+.mac h2 { font-size:18px; margin:0; }
+.vu { color:var(--doux); font-size:13px; }
+.vieux .vu { color:var(--rouge); }
+.robot { display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:center; padding:10px 0; border-top:1px solid var(--ligne); margin-top:10px; }
+.robot .nom { font-weight:600; }
+.robot .etat { color:var(--doux); font-size:14px; }
+.boutons { display:flex; gap:8px; }
+.boutons button { font:inherit; font-size:15px; font-weight:600; border:0; border-radius:8px; padding:10px 12px; min-width:92px; cursor:pointer; color:#fff; }
+.b-finir { background:var(--jaune); }
+.b-stop { background:var(--rouge); }
+.boutons button.confirme { outline:3px solid var(--encre); }
+.boutons button:disabled { opacity:.45; cursor:default; }
+.reponse { grid-column:1 / -1; font-size:14px; }
+.ok { color:var(--vert); } .non { color:var(--rouge); } .attente { color:var(--bleu); }
+.stats { grid-column:1 / -1; display:flex; gap:6px 14px; flex-wrap:wrap; align-items:center; font-size:14px; }
+.stats b { font-variant-numeric:tabular-nums; }
+.gain { color:var(--vert); } .perte { color:var(--rouge); }
+.courbe { width:120px; height:28px; }
+.total { background:var(--carte); border:1px solid var(--ligne); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:flex; gap:6px 18px; flex-wrap:wrap; font-size:15px; }
+.pastille { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:var(--doux); vertical-align:middle; }
+.p-joue { background:var(--vert); } .p-finit { background:var(--jaune); } .p-stop { background:var(--rouge); }
+@media (max-width:480px) { .robot { grid-template-columns:1fr; } .boutons button { flex:1; } }
+</style>
+</head>
+<body>
+<!-- 11/11 : barre commune des pages (Gains, Tableau, Suivi, Simulateur, Commandes ; Gains = accueil depuis le 12/11), ajoutée par publier.py juste après <body>.
+     Garde la clé (#...) d'une page à l'autre. Classes préfixées cn- : rien ne se mélange avec le style de la page. -->
+<style id="cn-style">
+.cn-barre{position:sticky;top:0;z-index:50;margin:0 0 14px;padding:10px 16px;
+  background:rgba(250,249,246,.82);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid rgba(0,0,0,.07);font:15px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.cn-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cn-marque{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.02em;font-size:17px;color:#16140f;text-decoration:none}
+.cn-logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#1f9d63 0%,#0f6e8c 55%,#6b4fd8 100%);
+  box-shadow:0 2px 8px rgba(31,157,99,.35);display:inline-block;position:relative}
+.cn-logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(255,255,255,.9)}
+.cn-onglets{display:flex;gap:4px;background:rgba(0,0,0,.05);padding:4px;border-radius:12px;overflow-x:auto;max-width:100%}
+.cn-onglets a{padding:7px 12px;border-radius:9px;color:#4a463e;text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.cn-onglets a:hover{color:#16140f;background:rgba(255,255,255,.6)}
+.cn-onglets a.cn-ici{background:#fff;color:#16140f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cn-direct{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:#6b665c;font-weight:600}
+.cn-point{width:8px;height:8px;border-radius:50%;background:#1f9d63;box-shadow:0 0 0 0 rgba(31,157,99,.6);animation:cn-pouls 2s infinite}
+@keyframes cn-pouls{0%{box-shadow:0 0 0 0 rgba(31,157,99,.55)}70%{box-shadow:0 0 0 7px rgba(31,157,99,0)}100%{box-shadow:0 0 0 0 rgba(31,157,99,0)}}
+@media (prefers-color-scheme:dark){
+  .cn-barre{background:rgba(20,20,22,.78);border-bottom-color:rgba(255,255,255,.08)}
+  .cn-marque{color:#f3f1ec}.cn-onglets{background:rgba(255,255,255,.07)}
+  .cn-onglets a{color:#b9b4aa}.cn-onglets a:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .cn-onglets a.cn-ici{background:#2c2c30;color:#fff;box-shadow:none}.cn-direct{color:#9c978d}}
+@media (max-width:560px){.cn-barre{padding:8px 12px}.cn-direct{display:none}.cn-in{gap:8px}.cn-onglets{flex:1}.cn-onglets a{flex:1;text-align:center;padding:7px 6px}}
+@media print{.cn-barre{display:none}}
+</style>
+<nav class="cn-barre" aria-label="Pages du carnet"><div class="cn-in">
+  <a class="cn-marque" data-cn="index.html" href="#"><span class="cn-logo"></span>Carnet</a>
+  <div class="cn-onglets">
+    <a data-cn="index.html" href="#">Gains</a>
+    <a data-cn="tableau.html" href="#">Tableau</a>
+    <a data-cn="suivi.html" href="#">Suivi</a>
+    <a data-cn="simulateur.html" href="#">Simulateur</a>
+    <a data-cn="commandes.html" href="#">Commandes</a>
+  </div>
+  <span class="cn-direct"><span class="cn-point"></span>4 Mac · mis à jour toutes les 2 min</span>
+</div></nav>
+<script id="cn-script">
+(function () {
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (page.indexOf('.html') < 0) page = 'index.html';
+  var liens = document.querySelectorAll('.cn-barre a[data-cn]');
+  function maj() {
+    for (var i = 0; i < liens.length; i++) {
+      var a = liens[i], cible = a.getAttribute('data-cn');
+      a.setAttribute('href', cible + (location.hash || '').split('&')[0]);      // la clé seule (le simulateur ajoute &scénario)
+      if (cible === page && a.className.indexOf('cn-marque') < 0) a.className = 'cn-ici';
+    }
+  }
+  maj();
+  window.addEventListener('hashchange', maj);
+})();
+</script>
+
+<div class="page">
+  <header><h1>Commandes</h1><span class="vu" id="heure"></span></header>
+  <div class="liens">
+    <button id="actualiser">Actualiser</button>
+  </div>
+  <div class="msg" id="msg">Chargement…</div>
+  <div class="total" id="total" style="display:none"></div>
+  <div id="macs"></div>
+  <p class="vu">« Finir les tables » : le robot finit les tables en cours et n'en prend plus. « Stop » : plus aucun clic tout de suite, les tables ouvertes ne sont plus jouées. Ni l'un ni l'autre ne relance quoi que ce soit : relancer se fait sur le Mac.</p>
+</div>
+<script>
+(function () {
+  "use strict";
+  const NTFY = "https://ntfy.sh";
+  // 11/11 : noms clairs, les mêmes sur toutes les pages (global/comptes.json). Chaque Mac ne montre que ses vrais comptes.
+  const MACS = [["simon", "Mac de Simon"], ["mini", "Mac mini"], ["air2", "MacBook Air 2"], ["air", "MacBook Air"]];
+  const ROBOTS_MAC = {"simon": [["unibet", "Simon · Unibet"], ["pmu", "Simon · PMU"]], "mini": [["unibet", "Mam · Unibet"], ["pmu", "Mam · PMU"]], "air2": [["unibet", "Henri · Unibet"]], "air": [["unibet", "Renald · Unibet"], ["pmu", "Renald · PMU"]]};
+  const ROBOTS = [["pmu", "PMU"], ["unibet", "Unibet"]];
+  const robotsDe = id => ROBOTS_MAC[id] || ROBOTS;
+  const nomRobot = (mac, r) => ((robotsDe(mac).find(x => x[0] === r) || [r, r === "pmu" ? "PMU" : "Unibet"])[1]);
+  const VIEUX_S = 25 * 60;
+  // 12/11 : « aujourd'hui » se décide à l'affichage, sur le jour de Paris, jamais d'après ce que le Mac a écrit quand il a
+  // publié. Le MacBook Air 2, éteint à 20:48, gardait « Aujourd'hui : 460 tournois, −13 € » après minuit (vu à 00:02 et 00:37).
+  function jourParis(ms) {
+    const p = {};
+    for (const x of new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms))) p[x.type] = x.value;
+    return p.year + "-" + p.month + "-" + p.day;
+  }
+  const jjmm = j => String(j || "?").slice(8, 10) + "/" + String(j || "?").slice(5, 7);
+  const heureParis = s => new Date(s * 1000).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+  const etatDuJour = e => !!(e && e.t) && jourParis(e.t * 1000) === jourParis(Date.now());
+  const etatVieux = e => !e || !e.t || Date.now() / 1000 - e.t > VIEUX_S;
+  function arretes(e) {      // les chiffres d'un Mac muet : on dit de quand ils datent
+    if (!e || !e.t || !etatVieux(e)) return "";
+    return "<span class='vu'>chiffres arrêtés " + (etatDuJour(e) ? "" : "le " + jjmm(jourParis(e.t * 1000)) + " ") + "à " + heureParis(e.t) + "</span>";
+  }
+  const msg = document.getElementById("msg"), zone = document.getElementById("macs");
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, "0")).join("");
+  let armé = null;
+  let cle = null, kMac = null, sOrdres = null, sEtats = null, etats = {}, attentes = {};
+
+  function cleDuLien() {
+    const h = location.hash.replace(/^#/, "").replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  async function hmacHex(texte) { return hex(await crypto.subtle.sign("HMAC", kMac, new TextEncoder().encode(texte))); }
+  async function sujet(nom) { return "cd-" + (await hmacHex("sujet:" + nom)).slice(0, 32); }
+  async function dechiffrer(texte) {
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kV = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kV, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", cle.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct)));
+  }
+
+  function depuis(t) {
+    if (!t) return "pas de nouvelles";
+    const s = Math.max(0, Math.round(Date.now() / 1000 - t));
+    return s < 90 ? "à l'instant" : s < 3600 ? "il y a " + Math.round(s / 60) + " min" : "il y a " + Math.round(s / 3600) + " h";
+  }
+  function texteRobot(r, e) {
+    if (!e) return ["", "pas de nouvelles"];
+    const x = e[r];
+    if (!x || x.present === false) return ["", "absent de ce Mac"];
+    if (r === "pmu") {
+      if (x.stop) return ["p-stop", "arrêté (STOP)" + (x.tables ? ", " + x.tables + " table(s) ouverte(s)" : "")];
+      if (!x.tableau) return ["", "tableau de bord fermé"];
+      const s = (x.session === "STOP" ? "aucune session" : x.session) || x.statut || "?", t = x.tables == null ? "" : ", " + x.tables + " table(s)";
+      const j = etatDuJour(e) && x.jour && x.jour.tournois ? " · jour : " + x.jour.tournois + " tournois" + (x.jour.net != null ? ", " + (x.jour.net > 0 ? "+" : "") + x.jour.net + " €" : "") : "";
+      return [/EN_SESSION|JEU/i.test(s) ? "p-joue" : /FIN/i.test(s) ? "p-finit" : "", s + t + j];
+    }
+    if (x.stop) return ["p-stop", "arrêté (STOP)"];
+    if (!x.tourne) return ["", "ne tourne pas" + (x.verrou ? "" : " · verrou fermé")];
+    if (x.finir || x.etat === "finir") return ["p-finit", "finit ses tables" + (x.tables != null ? " (" + x.tables + ")" : "")];
+    return ["p-joue", (x.etat || "démarre") + (x.tables != null ? ", " + x.tables + " table(s)" : "")];
+  }
+
+  const eur = x => x == null ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2).replace(".", ",").replace(",00", "") + " €";
+  const cls = x => x > 0 ? "gain" : x < 0 ? "perte" : "";
+  function courbe(c) {
+    if (!c || c.length < 2) return "";
+    const lo = Math.min(0, ...c), hi = Math.max(0, ...c), h = 26, w = 118, k = (hi - lo) || 1;
+    const pts = c.map((v, i) => (1 + i * w / (c.length - 1)).toFixed(1) + "," + (1 + h - (v - lo) * h / k).toFixed(1)).join(" ");
+    const y0 = (1 + h - (0 - lo) * h / k).toFixed(1), fin = c[c.length - 1];
+    return "<svg class='courbe' viewBox='0 0 120 28' aria-hidden='true'><line x1='0' x2='120' y1='" + y0 + "' y2='" + y0 + "' stroke='currentColor' stroke-opacity='.2'/>" +
+      "<polyline fill='none' stroke-width='2' stroke='" + (fin >= 0 ? "var(--vert)" : "var(--rouge)") + "' points='" + pts + "'/></svg>";
+  }
+  function stats(r, e) {
+    const x = e && e[r];
+    if (!x) return "";
+    const ajd = jourParis(Date.now()), duJour = etatDuJour(e), date = arretes(e);
+    if (r === "pmu") {
+      const j = x.jour;
+      if (!duJour) return j && j.tournois
+        ? "<div class='stats'><span>Dernier jour vu (" + jjmm(jourParis(e.t * 1000)) + ") : <b>" + j.tournois + "</b> tournois</span><span class='" + cls(j.net) + "'><b>" + eur(j.net) + "</b></span>" + date + "</div>"
+        : "<div class='stats vu'>Aujourd'hui : pas de nouvelles de ce Mac</div>";
+      if (!j || !j.tournois) return "<div class='stats vu'>Aujourd'hui : aucun tournoi</div>";
+      return "<div class='stats'><span>Aujourd'hui : <b>" + j.tournois + "</b> tournois</span><span class='" + cls(j.net) + "'><b>" + eur(j.net) + "</b></span>" + (j.cev != null ? "<span>cEV <b>" + Math.round(j.cev) + "</b></span>" : "") + date + "</div>";
+    }
+    const t = x.stats;
+    if (!t) return x.present ? "<div class='stats vu'>Chiffres pas lus (page Unibet du Mac fermée ?)</div>" : "";
+    const auj = t.jour === ajd;      // 12/11 : jamais t.aujourdhui (vrai quand le Mac a publié, encore vrai après minuit)
+    const quand = auj ? "Aujourd'hui" : "Dernier jour joué (" + jjmm(t.jour) + ")";
+    const solde = t.solde != null ? "<span>solde <b>" + String(t.solde).replace(".", ",") + " €</b></span>" : "";
+    if (duJour && x.fins && !(auj && t.tournois))
+      return "<div class='stats'><span>Aujourd'hui : <b>" + x.fins + "</b> tournois finis (journal du robot)</span>" + solde +
+        "<span class='perte'>Gains pas encore lus : historique des mains Unibet absent sur ce Mac</span>" + date + "</div>";
+    if (!t.tournois) return "<div class='stats vu'>" + quand + " : aucun tournoi compté" + (t.solde != null ? " · solde " + String(t.solde).replace(".", ",") + " €" : "") + "</div>";
+    return "<div class='stats'><span>" + quand + " : <b>" + t.tournois + "</b> tournois, <b>" + (t.gagnes || 0) + "</b> gagnés</span><span class='" + cls(t.net) + "'><b>" + eur(t.net) + "</b></span>" +
+      (t.cev != null ? "<span>cEV <b>" + Math.round(t.cev) + "</b></span>" : "") + (t.gros ? "<span>plus gros x" + t.gros + "</span>" : "") +
+      solde + courbe(t.courbe) + date + "</div>";
+  }
+  function total() {
+    let n = 0, net = 0, vus = 0;
+    const ajd = jourParis(Date.now());
+    for (const [id] of MACS) {
+      const e = etats[id];
+      if (!etatDuJour(e)) continue;             // 12/11 : un état publié hier ne compte jamais dans le total du jour
+      for (const [r] of robotsDe(id)) {         // seulement les robots affichés pour ce Mac
+        const x = e[r]; if (!x) continue;
+        const j = r === "pmu" ? x.jour : (x.stats && x.stats.jour === ajd ? x.stats : null);
+        if (j && j.tournois) { n += j.tournois; net += j.net || 0; vus++; }
+      }
+    }
+    const z = document.getElementById("total");
+    z.style.display = "flex";
+    z.innerHTML = vus ? "<span>Aujourd'hui, tous comptes : <b>" + n + "</b> tournois</span><span class='" + cls(net) + "'><b>" + eur(net) + "</b></span><span class='vu'>" + vus + " robot(s) ont joué</span>"
+                      : "<span class='vu'>Aujourd'hui, tous comptes : aucun tournoi compté pour l'instant</span>";
+  }
+  function bouton(id, r, ordre, classe, texte, absent) {
+    const arme = armé === id + ":" + r + ":" + ordre;
+    return "<button class='" + classe + (arme ? " confirme" : "") + "' data-mac='" + id + "' data-robot='" + r + "' data-ordre='" + ordre + "'" + (absent ? " disabled" : "") + ">" + (arme ? "Confirmer ?" : texte) + "</button>";
+  }
+  function dessiner() {
+    total();
+    document.getElementById("heure").textContent = "maj " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    zone.innerHTML = MACS.map(([id, nom]) => {
+      const e = etats[id], vieux = !e || Date.now() / 1000 - e.t > VIEUX_S;
+      const lignes = robotsDe(id).map(([r, rn]) => {
+        const [p0, t0] = texteRobot(r, e), cle_ = id + ":" + r, a = attentes[cle_];
+        // 12/11 : un Mac muet n'a plus d'état « en jeu » : son dernier état est daté, pastille grise
+        const p = vieux && e ? "" : p0, t = vieux && e ? "dernier état connu (" + (etatDuJour(e) ? "" : jjmm(jourParis(e.t * 1000)) + " ") + heureParis(e.t) + ") : " + t0 : t0;
+        let rep = "";
+        if (a && a.etat === "attente") rep = "<div class='reponse attente'>" + esc(a.libelle) + " envoyé, en attente du Mac…</div>";
+        else if (a) rep = "<div class='reponse " + (a.ok ? "ok" : "non") + "'>" + esc(a.libelle) + " : " + esc(a.message) + "</div>";
+        const absent = e && e[r] && e[r].present === false;
+        return "<div class='robot'><div><div class='nom'><span class='pastille " + p + "'></span>" + rn + "</div><div class='etat'>" + esc(t) + "</div></div>" +
+          "<div class='boutons'>" + bouton(id, r, "finir", "b-finir", "Finir les tables", absent) + bouton(id, r, "stop", "b-stop", "Stop", absent) + "</div>" + stats(r, e) + rep + "</div>";
+      }).join("");
+      return "<section class='mac" + (vieux ? " vieux" : "") + "'><h2>" + esc(nom) + "</h2><div class='vu'>Vu " + depuis(e && e.t) +
+        (vieux && e ? " : Mac éteint, endormi ou sans réseau ?" : "") + "</div>" + lignes + "</section>";
+    }).join("");
+  }
+
+  async function lireEtats() {
+    try {
+      const r = await fetch(NTFY + "/" + sEtats + "/json?poll=1&since=12h", { cache: "no-store" });
+      for (const l of (await r.text()).split("\n")) {
+        let m; try { m = JSON.parse(l); } catch (e) { continue; }
+        if (m.event !== "message") continue;
+        try {
+          const e = await dechiffrer(m.message);
+          if (e && e.mac && (!etats[e.mac] || e.t >= etats[e.mac].t)) etats[e.mac] = e;
+        } catch (e) { /* message d'une autre clé : ignoré */ }
+      }
+      for (const [k, a] of Object.entries(attentes)) {
+        const e = etats[k.split(":")[0]];
+        if (a.etat === "attente" && e && e.dernier && e.dernier.n === a.n) Object.assign(attentes[k], { etat: "fini", ok: e.dernier.ok, message: e.dernier.message });
+        else if (a.etat === "attente" && Date.now() - a.envoye > 60000) Object.assign(attentes[k], { etat: "fini", ok: false, message: "pas de réponse du Mac en 1 min (éteint, endormi, sans réseau ?). Vérifie sur le Mac." });
+      }
+      msg.style.display = "none";
+    } catch (e) { msg.textContent = "Lecture impossible (réseau ?). Nouvel essai dans 20 s."; msg.style.display = "block"; }
+    dessiner();
+  }
+
+  async function envoyer(mac, robot, ordre) {
+    const n = hex(crypto.getRandomValues(new Uint8Array(12)));
+    const o = { v: 1, mac, robot, ordre, ts: Math.floor(Date.now() / 1000), n };
+    o.sig = await hmacHex([o.v, o.mac, o.robot, o.ordre, o.ts, o.n].join("|"));
+    const r = await fetch(NTFY + "/" + sOrdres, { method: "POST", body: JSON.stringify(o) });
+    if (!r.ok) throw new Error("ntfy " + r.status);
+    return n;
+  }
+
+  zone.addEventListener("click", async ev => {
+    const b = ev.target.closest("button[data-ordre]");
+    if (!b || b.disabled) return;
+    const { mac, robot, ordre } = b.dataset, k = mac + ":" + robot + ":" + ordre;
+    const libelle = (ordre === "stop" ? "Stop " : "Finir les tables ") + nomRobot(mac, robot) + ", " + MACS.find(x => x[0] === mac)[1];
+    if (armé !== k) {                                  // 1er appui : on demande confirmation (5 s)
+      armé = k; dessiner();
+      setTimeout(() => { if (armé === k) { armé = null; dessiner(); } }, 5000);
+      return;
+    }
+    armé = null;
+    try {
+      const n = await envoyer(mac, robot, ordre);
+      attentes[mac + ":" + robot] = { etat: "attente", n, libelle, envoye: Date.now() };
+      dessiner();
+      for (let i = 0; i < 12 && attentes[mac + ":" + robot].etat === "attente"; i++) { await new Promise(r => setTimeout(r, 4000)); await lireEtats(); }
+    } catch (e) { attentes[mac + ":" + robot] = { etat: "fini", ok: false, libelle, message: "pas envoyé (" + e.message + "). Réessaie." }; dessiner(); }
+  });
+
+  document.getElementById("actualiser").onclick = async () => {
+    try { await envoyer("tous", "tous", "etat"); } catch (e) { /* lecture quand même */ }
+    msg.textContent = "Demande envoyée aux Macs…"; msg.style.display = "block";
+    setTimeout(lireEtats, 4000); setTimeout(lireEtats, 10000);
+  };
+
+  (async function () {
+    cle = cleDuLien();
+    if (!cle) { msg.textContent = "Lien incomplet : ouvre le lien entier (avec la partie après le #)."; return; }
+    for (const a of document.querySelectorAll("a[data-page]")) a.href = a.dataset.page + location.hash;
+    kMac = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    sOrdres = await sujet("ordres"); sEtats = await sujet("etats");
+    await lireEtats();
+    setInterval(lireEtats, 20000);
+    setInterval(dessiner, 15000);
+  })();
+})();
+</script>
+</body>
+</html>
