@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Planning</title>
+<!-- 20/11 : planning des ordis et des écrans (demande de Simon et Mathieu). Le plan d'origine arrive chiffré (planning.enc,
+     branche « donnees », clé après le # du lien). Les changements restent dans le navigateur (localStorage) ; « Partager »
+     met le plan dans le lien. Classes préfixées pl- : rien ne se mélange avec la barre commune (cn-). -->
+<style>
+:root{
+  --fond:#f6f5f1;--carte:#ffffff;--carte-2:#f1efe9;--trait:rgba(0,0,0,.08);--trait-2:rgba(0,0,0,.14);
+  --texte:#16140f;--texte-2:#4a463e;--texte-3:#7a756b;
+  --vert:#15803d;--vert-fond:#e7f6ec;--rouge:#b91c1c;--rouge-fond:#fdecec;--ambre:#b45309;--ambre-fond:#fdf3e3;
+  --accent:#4f46e5;--accent-fond:#eef0ff;--ombre:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  --unibet:#15803d;--pmu:#c2410c;--pokerstars:#b91c1c;--memecoin:#6d28d9;--autre:#475569;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --fond:#121214;--carte:#1c1c20;--carte-2:#242429;--trait:rgba(255,255,255,.08);--trait-2:rgba(255,255,255,.16);
+  --texte:#f3f1ec;--texte-2:#c9c4ba;--texte-3:#948f86;
+  --vert:#4ade80;--vert-fond:rgba(74,222,128,.12);--rouge:#f87171;--rouge-fond:rgba(248,113,113,.13);--ambre:#fbbf24;--ambre-fond:rgba(251,191,36,.12);
+  --accent:#a5b4fc;--accent-fond:rgba(165,180,252,.13);--ombre:0 1px 2px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --fond:#121214;--carte:#1c1c20;--carte-2:#242429;--trait:rgba(255,255,255,.08);--trait-2:rgba(255,255,255,.16);
+  --texte:#f3f1ec;--texte-2:#c9c4ba;--texte-3:#948f86;
+  --vert:#4ade80;--vert-fond:rgba(74,222,128,.12);--rouge:#f87171;--rouge-fond:rgba(248,113,113,.13);--ambre:#fbbf24;--ambre-fond:rgba(251,191,36,.12);
+  --accent:#a5b4fc;--accent-fond:rgba(165,180,252,.13);--ombre:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--fond);color:var(--texte);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+.pl-page{max-width:1100px;margin:0 auto;padding:4px 16px 60px}
+.pl-haut{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:8px 0 16px}
+.pl-haut h1{margin:0;font-size:28px;letter-spacing:-.03em;line-height:1.1}
+.pl-sous{color:var(--texte-3);font-size:14px;margin-top:4px}
+.pl-actions{display:flex;gap:8px;flex-wrap:wrap}
+.pl-btn{appearance:none;border:1px solid var(--trait-2);background:var(--carte);color:var(--texte);border-radius:10px;padding:8px 12px;font:600 14px/1 inherit;cursor:pointer}
+.pl-btn:hover{background:var(--carte-2)}
+.pl-btn.pl-prim{background:var(--accent);border-color:var(--accent);color:#fff}
+:root:not([data-theme="light"]) .pl-btn.pl-prim{color:#111}
+@media (prefers-color-scheme:light){.pl-btn.pl-prim{color:#fff}}
+.pl-btn.pl-danger{color:var(--rouge)}
+.pl-carte{background:var(--carte);border:1px solid var(--trait);border-radius:18px;box-shadow:var(--ombre);padding:16px;margin:0 0 16px}
+.pl-carte h2{margin:0 0 12px;font-size:17px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.pl-carte h2 .pl-compte{margin-left:auto;font-size:13px;color:var(--texte-3);font-weight:600}
+.pl-msg{padding:12px 14px;border-radius:12px;background:var(--ambre-fond);color:var(--texte);margin:0 0 16px}
+.pl-msg b{color:var(--ambre)}
+.pl-cache{display:none!important}
+
+/* score */
+.pl-score{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.pl-badge{width:104px;height:104px;border-radius:28px;display:grid;place-items:center;text-align:center;color:#fff;
+  background:conic-gradient(from 200deg,var(--niv,#eab308),color-mix(in srgb,var(--niv,#eab308) 55%,#000),var(--niv,#eab308));
+  box-shadow:inset 0 0 0 4px rgba(255,255,255,.25),0 8px 24px color-mix(in srgb,var(--niv,#eab308) 35%,transparent)}
+.pl-badge b{display:block;font-size:30px;line-height:1;letter-spacing:-.03em}
+.pl-badge span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.95}
+.pl-gros{font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.pl-gros small{font-size:15px;font-weight:600;color:var(--texte-3);letter-spacing:0}
+.pl-barre{height:12px;border-radius:99px;background:var(--carte-2);overflow:hidden;margin:10px 0 6px;position:relative}
+.pl-barre i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--niv,#eab308));transition:width .6s}
+.pl-mini{font-size:13px;color:var(--texte-3)}
+.pl-tuiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.pl-tuile{background:var(--carte-2);border-radius:14px;padding:10px 12px}
+.pl-tuile b{display:block;font-size:20px;letter-spacing:-.02em}
+.pl-tuile>span{font-size:12px;color:var(--texte-3);font-weight:600}
+.pl-hausse{color:var(--vert)}
+@media (max-width:640px){.pl-score{grid-template-columns:1fr}.pl-badge{width:84px;height:84px;border-radius:22px}.pl-tuiles{grid-template-columns:repeat(2,1fr)}}
+
+/* quêtes */
+.pl-quetes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.pl-quete{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--vert-fond)}
+.pl-quete.pl-ko{background:var(--rouge-fond)}
+.pl-quete.pl-prevoir{background:var(--ambre-fond)}
+.pl-quete .pl-ico{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;background:var(--vert)}
+.pl-quete.pl-ko .pl-ico{background:var(--rouge)}
+.pl-quete.pl-prevoir .pl-ico{background:var(--ambre)}
+:root:not([data-theme="light"]) .pl-quete .pl-ico{color:#111}
+@media (prefers-color-scheme:light){.pl-quete .pl-ico{color:#fff}}
+.pl-quete b{display:block;font-size:14px}
+.pl-quete small{display:block;color:var(--texte-2);font-size:12.5px;margin-top:2px}
+
+/* frise */
+.pl-frise{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 0 4px}
+.pl-grille{min-width:900px;position:relative}
+.pl-ligne{display:grid;grid-template-columns:152px 1fr;align-items:stretch;min-height:72px;border-top:1px solid var(--trait)}
+.pl-ligne.pl-regle{min-height:26px;border-top:0}
+.pl-nom{position:sticky;left:0;z-index:3;background:var(--carte);padding:8px 10px 8px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.pl-nom b{font-size:14px;display:flex;align-items:center;gap:6px}
+.pl-nom b i{width:10px;height:10px;border-radius:3px;flex:none}
+.pl-nom small{color:var(--texte-3);font-size:12px}
+.pl-nom button{align-self:flex-start;margin-top:2px;border:0;background:none;color:var(--accent);font:600 12px/1 inherit;padding:2px 0;cursor:pointer}
+.pl-piste{position:relative;margin-right:16px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/24 - 1px),var(--trait) calc(100%/24 - 1px),var(--trait) calc(100%/24))}
+.pl-heures{position:relative;height:26px;margin-right:16px}
+.pl-heures span{position:absolute;top:6px;transform:translateX(-50%);font-size:11px;color:var(--texte-3);font-variant-numeric:tabular-nums}
+.pl-heures span:first-child{transform:none}.pl-heures span:last-child{transform:translateX(-100%)}
+.pl-bloc{position:absolute;top:7px;bottom:7px;border-radius:10px;color:#fff;padding:5px 8px;overflow:hidden;cursor:pointer;border:0;text-align:left;
+  font:inherit;display:flex;flex-direction:column;justify-content:center;gap:1px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);transition:transform .12s,box-shadow .12s}
+.pl-bloc:hover,.pl-bloc:focus-visible{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.18);outline:none;z-index:2}
+.pl-bloc b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-bloc small{font-size:11.5px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.pl-bloc.pl-info{opacity:.55;border:1px dashed rgba(255,255,255,.7)}
+.pl-bloc.pl-verrou{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 6px,transparent 6px 12px)!important;opacity:.62}
+.pl-bloc.pl-erreur{box-shadow:0 0 0 2px var(--carte),0 0 0 4px var(--rouge)}
+.pl-bloc.pl-live{box-shadow:0 0 0 2px var(--carte),0 0 0 4px var(--vert);animation:pl-pouls 2.4s infinite}
+@keyframes pl-pouls{0%,100%{box-shadow:0 0 0 2px var(--carte),0 0 0 4px var(--vert)}50%{box-shadow:0 0 0 2px var(--carte),0 0 0 7px color-mix(in srgb,var(--vert) 35%,transparent)}}
+.pl-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.22);margin-left:4px;vertical-align:1px}
+.pl-maintenant{position:absolute;top:0;bottom:0;width:2px;background:var(--rouge);z-index:1;pointer-events:none}
+.pl-piste .pl-bloc{z-index:2}
+.pl-maintenant:before{content:attr(data-h);position:absolute;top:2px;left:50%;transform:translateX(-50%);background:var(--rouge);color:#fff;font-size:10.5px;font-weight:800;padding:1px 5px;border-radius:5px;white-space:nowrap}
+.pl-legende{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--texte-2)}
+.pl-legende span{display:flex;align-items:center;gap:6px}
+.pl-legende i{width:14px;height:10px;border-radius:3px}
+
+/* missions */
+.pl-missions{list-style:none;margin:0;padding:0}
+.pl-missions li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-top:1px solid var(--trait)}
+.pl-missions li:first-child{border-top:0}
+.pl-missions .pl-h{font-variant-numeric:tabular-nums;font-weight:800;width:48px;flex:none}
+.pl-missions label{display:flex;align-items:center;gap:12px;flex:1;cursor:pointer}
+.pl-missions input{width:22px;height:22px;accent-color:var(--vert);flex:none}
+.pl-missions .pl-txt small{display:block;color:var(--texte-3);font-size:12.5px}
+.pl-missions li.pl-fait .pl-txt{text-decoration:line-through;color:var(--texte-3)}
+.pl-missions li.pl-suivante{background:var(--accent-fond);border-radius:12px;border-top-color:transparent}
+.pl-missions li.pl-suivante + li{border-top-color:transparent}
+.pl-xp{font-size:12px;font-weight:800;color:var(--accent);flex:none}
+.pl-bravo{display:none;margin-top:10px;padding:12px;border-radius:12px;background:var(--vert-fond);color:var(--vert);font-weight:800;text-align:center;animation:pl-pop .5s}
+.pl-bravo.pl-oui{display:block}
+@keyframes pl-pop{0%{transform:scale(.9);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+
+/* coffre + sonnerie */
+.pl-deux{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.pl-deux{grid-template-columns:1fr}}
+.pl-deux .pl-carte{margin:0}
+.pl-liste{margin:0;padding-left:18px}
+.pl-liste li{margin:4px 0}
+.pl-gain{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--ambre)}
+
+/* ordis et écrans */
+.pl-tableau{display:grid;gap:8px}
+.pl-rangee{display:grid;grid-template-columns:18px 1fr 1fr auto;gap:8px;align-items:center}
+.pl-rangee.pl-sans-lieu{grid-template-columns:18px 1fr auto}
+.pl-rangee i{width:14px;height:14px;border-radius:4px}
+.pl-champ,.pl-form select,.pl-form input[type=text],.pl-form input[type=time]{width:100%;border:1px solid var(--trait-2);background:var(--carte);color:var(--texte);border-radius:10px;padding:8px 10px;font:inherit}
+.pl-x{border:0;background:none;color:var(--texte-3);font-size:18px;cursor:pointer;padding:4px 8px;border-radius:8px}
+.pl-x:hover{background:var(--carte-2);color:var(--rouge)}
+.pl-x:disabled{opacity:.3;cursor:default}
+
+/* fenêtre d'édition */
+dialog.pl-dlg{border:0;border-radius:20px;padding:0;background:var(--carte);color:var(--texte);width:min(440px,calc(100vw - 24px));box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog.pl-dlg::backdrop{background:rgba(10,10,12,.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.pl-form{padding:18px;display:grid;gap:12px}
+.pl-form h3{margin:0;font-size:18px}
+.pl-form label{display:grid;gap:5px;font-size:13px;font-weight:600;color:var(--texte-2)}
+.pl-form .pl-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pl-form .pl-coche{display:flex;align-items:center;gap:8px;font-weight:600}
+.pl-form .pl-coche input{width:18px;height:18px}
+.pl-form .pl-bas{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:4px}
+.pl-form .pl-err{color:var(--rouge);font-size:13px;min-height:1em}
+.pl-pied{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--texte-3);font-size:13px}
+.pl-pied .pl-sep{flex:1}
+@media (max-width:560px){.pl-haut h1{font-size:24px}.pl-rangee{grid-template-columns:14px 1fr auto}.pl-rangee .pl-lieu{display:none}}
+</style>
+</head>
+<body>
+<!-- 11/11 : barre commune des pages (Gains, Tableau, Suivi, Simulateur, Commandes ; Gains = accueil depuis le 12/11), ajoutée par publier.py juste après <body>.
+     Garde la clé (#...) d'une page à l'autre. Classes préfixées cn- : rien ne se mélange avec le style de la page. -->
+<style id="cn-style">
+.cn-barre{position:sticky;top:0;z-index:50;margin:0 0 14px;padding:10px 16px;
+  background:rgba(250,249,246,.82);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid rgba(0,0,0,.07);font:15px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.cn-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cn-marque{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.02em;font-size:17px;color:#16140f;text-decoration:none}
+.cn-logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#1f9d63 0%,#0f6e8c 55%,#6b4fd8 100%);
+  box-shadow:0 2px 8px rgba(31,157,99,.35);display:inline-block;position:relative}
+.cn-logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(255,255,255,.9)}
+.cn-onglets{display:flex;gap:4px;background:rgba(0,0,0,.05);padding:4px;border-radius:12px;overflow-x:auto;max-width:100%}
+.cn-onglets a{padding:7px 12px;border-radius:9px;color:#4a463e;text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.cn-onglets a:hover{color:#16140f;background:rgba(255,255,255,.6)}
+.cn-onglets a.cn-ici{background:#fff;color:#16140f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cn-direct{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:#6b665c;font-weight:600}
+.cn-point{width:8px;height:8px;border-radius:50%;background:#1f9d63;box-shadow:0 0 0 0 rgba(31,157,99,.6);animation:cn-pouls 2s infinite}
+@keyframes cn-pouls{0%{box-shadow:0 0 0 0 rgba(31,157,99,.55)}70%{box-shadow:0 0 0 7px rgba(31,157,99,0)}100%{box-shadow:0 0 0 0 rgba(31,157,99,0)}}
+@media (prefers-color-scheme:dark){
+  .cn-barre{background:rgba(20,20,22,.78);border-bottom-color:rgba(255,255,255,.08)}
+  .cn-marque{color:#f3f1ec}.cn-onglets{background:rgba(255,255,255,.07)}
+  .cn-onglets a{color:#b9b4aa}.cn-onglets a:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .cn-onglets a.cn-ici{background:#2c2c30;color:#fff;box-shadow:none}.cn-direct{color:#9c978d}}
+@media (max-width:560px){.cn-barre{padding:8px 12px}.cn-direct{display:none}.cn-in{gap:8px}.cn-onglets{flex:1}.cn-onglets a{flex:1;text-align:center;padding:7px 6px}}
+@media print{.cn-barre{display:none}}
+</style>
+<nav class="cn-barre" aria-label="Pages du carnet"><div class="cn-in">
+  <a class="cn-marque" data-cn="index.html" href="#"><span class="cn-logo"></span>Carnet</a>
+  <div class="cn-onglets">
+    <a data-cn="index.html" href="#">Gains</a>
+    <a data-cn="tableau.html" href="#">Tableau</a>
+    <a data-cn="suivi.html" href="#">Suivi</a>
+    <a data-cn="simulateur.html" href="#">Simulateur</a>
+    <a data-cn="commandes.html" href="#">Commandes</a>
+    <a data-cn="planning.html" href="#">Planning</a>
+  </div>
+  <span class="cn-direct"><span class="cn-point"></span>4 Mac · mis à jour toutes les 2 min</span>
+</div></nav>
+<script id="cn-script">
+(function () {
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (page.indexOf('.html') < 0) page = 'index.html';
+  var liens = document.querySelectorAll('.cn-barre a[data-cn]');
+  function maj() {
+    for (var i = 0; i < liens.length; i++) {
+      var a = liens[i], cible = a.getAttribute('data-cn');
+      a.setAttribute('href', cible + (location.hash || '').split('&')[0]);      // la clé seule (le simulateur ajoute &scénario)
+      if (cible === page && a.className.indexOf('cn-marque') < 0) a.className = 'cn-ici';
+    }
+  }
+  maj();
+  window.addEventListener('hashchange', maj);
+})();
+</script>
+
+<main class="pl-page">
+  <header class="pl-haut">
+    <div>
+      <h1>Planning de la maison</h1>
+      <div class="pl-sous" id="pl-sous">Chargement…</div>
+    </div>
+    <div class="pl-actions">
+      <button class="pl-btn pl-prim" id="pl-partager" type="button">Partager ce planning</button>
+    </div>
+  </header>
+
+  <div class="pl-msg pl-cache" id="pl-msg"></div>
+
+  <div id="pl-corps" class="pl-cache">
+    <section class="pl-carte" aria-label="Score">
+      <div class="pl-score">
+        <div class="pl-badge" id="pl-badge"><div><b id="pl-badge-h">0</b><span id="pl-badge-n">Niveau</span></div></div>
+        <div>
+          <div class="pl-gros"><span id="pl-heures">0 h</span> <small>de jeu par jour</small></div>
+          <div class="pl-barre"><i id="pl-barre" style="width:0"></i></div>
+          <div class="pl-mini" id="pl-prochain-niv"></div>
+          <div class="pl-tuiles">
+            <div class="pl-tuile"><b id="pl-t-live">0</b><span>robots en jeu maintenant (prévu)</span></div>
+            <div class="pl-tuile"><b id="pl-t-suite">–</b><span id="pl-t-suite-txt">prochaine mission</span></div>
+            <div class="pl-tuile"><b id="pl-t-avant">–</b><span>par rapport à avant</span></div>
+            <div class="pl-tuile"><b id="pl-t-quetes">–</b><span>règles respectées</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pl-carte" aria-label="Frise des ordis">
+      <h2>La journée, ordi par ordi <span class="pl-compte">Touche un créneau pour le changer</span></h2>
+      <div class="pl-frise" id="pl-frise-macs"></div>
+      <div class="pl-legende" id="pl-legende"></div>
+    </section>
+
+    <section class="pl-carte" aria-label="Règles">
+      <h2>Les règles <span class="pl-compte" id="pl-quetes-compte"></span></h2>
+      <div class="pl-quetes" id="pl-quetes"></div>
+    </section>
+
+    <section class="pl-carte" aria-label="Missions du jour">
+      <h2>Missions du jour <span class="pl-compte" id="pl-missions-compte"></span></h2>
+      <div class="pl-barre" style="margin-top:0"><i id="pl-missions-barre" style="width:0"></i></div>
+      <ul class="pl-missions" id="pl-missions"></ul>
+      <div class="pl-bravo" id="pl-bravo">Journée parfaite. Toutes les missions sont faites.</div>
+    </section>
+
+    <section class="pl-carte" aria-label="Frise des écrans">
+      <h2>Les écrans 1080p <span class="pl-compte">un écran = un ordi à la fois</span></h2>
+      <div class="pl-frise" id="pl-frise-ecrans"></div>
+    </section>
+
+    <div class="pl-deux" style="margin-bottom:16px">
+      <section class="pl-carte" aria-label="À débloquer">
+        <h2>🔒 À débloquer</h2>
+        <div class="pl-gain" id="pl-coffre-h">+0 h</div>
+        <div class="pl-mini" style="margin-bottom:10px">de jeu par jour en plus quand ces créneaux seront ouverts</div>
+        <ul class="pl-liste" id="pl-coffre"></ul>
+        <div class="pl-mini" style="margin-top:10px" id="pl-coffre-ecran"></div>
+      </section>
+      <section class="pl-carte" aria-label="Si un Mac sonne">
+        <h2>🔔 Si un Mac sonne</h2>
+        <ul class="pl-liste">
+          <li>Le robot s'est coupé seul : il ne misait plus, ne jouait plus, ou lisait mal la table.</li>
+          <li>Ton téléphone reçoit « ROBOT COUPÉ » en même temps.</li>
+          <li>Bouge la souris : le son s'arrête.</li>
+          <li>Les tables en cours finissent, plus aucune inscription.</li>
+          <li>Regarde l'écran avant de relancer (START). Une série de pertes ne coupe jamais rien.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="pl-carte" aria-label="Ordis et écrans">
+      <h2>Ordis et écrans <span class="pl-compte">renomme, ajoute, retire</span></h2>
+      <div class="pl-tableau" id="pl-macs"></div>
+      <div style="margin:10px 0 18px"><button class="pl-btn" type="button" id="pl-ajout-mac">+ Ajouter un ordi</button></div>
+      <div class="pl-tableau" id="pl-ecrans"></div>
+      <div style="margin-top:10px"><button class="pl-btn" type="button" id="pl-ajout-ecran">+ Ajouter un écran</button></div>
+    </section>
+
+    <div class="pl-pied">
+      <span id="pl-etat">Plan d'origine</span>
+      <span class="pl-sep"></span>
+      <button class="pl-btn" type="button" id="pl-commandes">État réel : Commandes</button>
+      <button class="pl-btn pl-danger" type="button" id="pl-reset">Revenir au plan d'origine</button>
+    </div>
+  </div>
+</main>
+
+<dialog class="pl-dlg" id="pl-dlg">
+  <form class="pl-form" method="dialog" id="pl-form">
+    <h3 id="pl-f-titre">Créneau</h3>
+    <div class="pl-2">
+      <label>Qui<input type="text" id="pl-f-qui" maxlength="24" autocomplete="off"></label>
+      <label>Site<select id="pl-f-site"></select></label>
+    </div>
+    <div class="pl-2">
+      <label>Début<input type="time" id="pl-f-debut" step="300"></label>
+      <label>Fin<input type="time" id="pl-f-fin" step="300"></label>
+    </div>
+    <div class="pl-2">
+      <label>Ordi<select id="pl-f-mac"></select></label>
+      <label>Mise<select id="pl-f-mise"><option value="">–</option><option value="0.5">0,50 €</option><option value="1">1 €</option><option value="2">2 €</option><option value="5">5 €</option></select></label>
+    </div>
+    <label>Écran<select id="pl-f-ecran"></select></label>
+    <label class="pl-coche"><input type="checkbox" id="pl-f-attente"> En attente d'accord (pas encore joué)</label>
+    <label>Note<input type="text" id="pl-f-note" maxlength="140" autocomplete="off"></label>
+    <div class="pl-err" id="pl-f-err"></div>
+    <div class="pl-bas">
+      <span style="display:flex;gap:8px">
+        <button class="pl-btn pl-danger" type="button" id="pl-f-suppr">Supprimer</button>
+        <button class="pl-btn" type="button" id="pl-f-dupli">Dupliquer</button>
+      </span>
+      <span style="display:flex;gap:8px">
+        <button class="pl-btn" type="button" id="pl-f-annuler">Annuler</button>
+        <button class="pl-btn pl-prim" type="button" id="pl-f-ok">Enregistrer</button>
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+  const LOCAL = location.protocol === "file:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  const DONNEES = LOCAL ? "planning.enc" : "https://raw.githubusercontent.com/colfersimon/tableau/donnees/planning.enc";
+  const CLE_PLAN = "pl-plan-v1", CLE_FAIT = "pl-fait-";
+  const SITES = {
+    unibet: { nom: "Unibet", poker: true }, pmu: { nom: "PMU", poker: true }, pokerstars: { nom: "PokerStars", poker: true },
+    memecoin: { nom: "Memecoin", poker: false }, autre: { nom: "Autre", poker: false }
+  };
+  const COULEURS_MAC = ["#3b82f6", "#14b8a6", "#f59e0b", "#a855f7", "#ec4899", "#84cc16", "#f97316", "#06b6d4"];
+  const NIVEAUX = [{ n: "Débutant", h: 0, c: "#64748b" }, { n: "Bronze", h: 20, c: "#b4783c" }, { n: "Argent", h: 35, c: "#8b9bb0" },
+                   { n: "Or", h: 50, c: "#d4a106" }, { n: "Diamant", h: 70, c: "#0ea5e9" }];
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* rien */ } }
+  };
+  let origine = null, plan = null, cleTexte = "";
+
+  // ---------- temps ----------
+  const min = hm => { const m = /^(\d{1,2}):(\d{2})$/.exec(hm || ""); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+  const hm = x => { x = ((x % 1440) + 1440) % 1440; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+  const duree = c => { const a = min(c.debut), b = min(c.fin); return a == null || b == null ? 0 : (b > a ? b - a : b + 1440 - a); };
+  const hTxt = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return h + " h" + (r ? " " + String(r).padStart(2, "0") : ""); };
+  function paris() {
+    const p = {};
+    for (const x of new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date())) p[x.type] = x.value;
+    return { jour: p.year + "-" + p.month + "-" + p.day, m: (+p.hour) * 60 + (+p.minute) };
+  }
+  // un créneau en morceaux sur la journée (deux morceaux s'il passe minuit)
+  function morceaux(c) {
+    const a = min(c.debut), b = min(c.fin);
+    if (a == null || b == null || a === b) return [];
+    return b > a ? [[a, b]] : [[a, 1440], [0, b]];
+  }
+  const actif = (c, t) => !c.attente && morceaux(c).some(([a, b]) => t >= a && t < b);
+  const chevauche = (x, y) => morceaux(x).some(([a, b]) => morceaux(y).some(([c, d]) => a < d && c < b));
+  // heures de jeu : une fenêtre de 8 h 40 = 8 h de jeu (pauses du robot)
+  const jeu = d => d >= 520 ? d - 40 : d * 480 / 520;
+  const poker = c => (SITES[c.site] || {}).poker;
+  const mac = id => plan.macs.find(m => m.id === id) || { id, nom: id || "?", couleur: "#94a3b8" };
+  const ecran = id => plan.ecrans.find(e => e.id === id) || null;
+  const nomSite = s => (SITES[s] || { nom: s || "?" }).nom;
+  const titre = c => c.qui + " · " + nomSite(c.site);
+
+  // ---------- chargement ----------
+  function cleDuLien() {
+    cleTexte = (location.hash || "").replace(/^#/, "").split("&")[0];
+    const h = cleTexte.replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  async function dechiffrer(cle, texte) {
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kMac = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", cle.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct)));
+  }
+  function message(html) { const m = $("pl-msg"); m.innerHTML = html; m.classList.remove("pl-cache"); }
+  function valide(p) {
+    return p && Array.isArray(p.macs) && Array.isArray(p.ecrans) && Array.isArray(p.creneaux) &&
+      p.creneaux.every(c => c && typeof c.id === "string" && min(c.debut) != null && min(c.fin) != null);
+  }
+  const copie = o => JSON.parse(JSON.stringify(o));
+  function sauver() {
+    plan.modifie = new Date().toISOString();
+    if (!store.set(CLE_PLAN, JSON.stringify(plan))) $("pl-etat").textContent = "Changements pas gardés : ce navigateur bloque la mémoire locale";
+    rendre();
+  }
+  function planPartage() {
+    const m = /[#&]plan=([A-Za-z0-9_-]+)/.exec(location.hash || "");
+    if (!m) return null;
+    try {
+      const s = m[1].replace(/-/g, "+").replace(/_/g, "/");
+      const p = JSON.parse(new TextDecoder().decode(b64(s + "===".slice((s.length + 3) % 4))));
+      return valide(p) ? p : null;
+    } catch (e) { return null; }
+  }
+
+  async function demarrer() {
+    const cle = cleDuLien();
+    if (!cle) { message("<b>Lien incomplet.</b> Ouvre le planning depuis le lien du Carnet (avec la partie après le #)."); $("pl-sous").textContent = ""; return; }
+    try {
+      const r = await fetch(DONNEES + (LOCAL ? "" : "?t=" + Math.floor(Date.now() / 60000)), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      origine = await dechiffrer(cle, await r.text());
+    } catch (e) {
+      message("<b>Planning illisible.</b> " + (String(e.message).indexOf("clé") >= 0 ? "La clé du lien est fausse." : "Réessaie dans une minute (" + esc(e.message) + ")."));
+      $("pl-sous").textContent = "";
+      return;
+    }
+    let local = null;
+    try { local = JSON.parse(store.get(CLE_PLAN) || "null"); } catch (e) { local = null; }
+    plan = valide(local) ? local : copie(origine);
+    if (valide(local) && local.version !== origine.version) {
+      message("<b>Nouveau plan d'origine (" + esc(origine.version) + ").</b> Tu as un ancien plan modifié sur cet appareil. <button class='pl-btn pl-prim' type='button' id='pl-neuf'>Prendre le nouveau</button> <button class='pl-btn' type='button' id='pl-vieux'>Garder le mien</button>");
+      $("pl-neuf").onclick = () => { store.del(CLE_PLAN); plan = copie(origine); $("pl-msg").classList.add("pl-cache"); rendre(); };
+      $("pl-vieux").onclick = () => { plan.version = origine.version; $("pl-msg").classList.add("pl-cache"); sauver(); };
+    }
+    const partage = planPartage();
+    if (partage) {
+      message("<b>On t'a partagé un planning.</b> <button class='pl-btn pl-prim' type='button' id='pl-prendre'>Le prendre</button> <button class='pl-btn' type='button' id='pl-ignorer'>Garder le mien</button>");
+      const nettoyer = () => { history.replaceState(null, "", location.pathname + "#" + cleTexte); $("pl-msg").classList.add("pl-cache"); };
+      $("pl-prendre").onclick = () => { plan = partage; nettoyer(); sauver(); };
+      $("pl-ignorer").onclick = nettoyer;
+    }
+    $("pl-corps").classList.remove("pl-cache");
+    rendre();
+    const p = paris(), f = $("pl-frise-macs");
+    f.scrollLeft = Math.max(0, (p.m - 120) / 1440 * (f.scrollWidth - 168));
+    setInterval(rendre, 30000);
+  }
+
+  // ---------- règles ----------
+  function regles() {
+    const C = plan.creneaux, R = [];
+    const parCompte = {};
+    for (const c of C) if (poker(c) && !c.info) (parCompte[c.qui + " · " + nomSite(c.site)] = parCompte[c.qui + " · " + nomSite(c.site)] || []).push(c);
+    const trop = Object.entries(parCompte).filter(([, L]) => L.reduce((s, c) => s + duree(c), 0) > 520);
+    R.push({ titre: "8 h 40 au plus par compte et par jour", ok: !trop.length, ids: trop.flatMap(([, L]) => L.map(c => c.id)),
+             detail: trop.length ? trop.map(([k, L]) => k + " : " + hTxt(L.reduce((s, c) => s + duree(c), 0))).join(", ") : "Chaque compte joue au plus 8 h de jeu (+ pauses)." });
+    const doubles = [];
+    for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++)
+      if (C[i].mac === C[j].mac && chevauche(C[i], C[j])) doubles.push([C[i], C[j]]);
+    R.push({ titre: "Un seul robot à la fois par ordi", ok: !doubles.length, ids: doubles.flat().map(c => c.id),
+             detail: doubles.length ? doubles.map(([a, b]) => mac(a.mac).nom + " : " + titre(a) + " et " + titre(b)).join(" ; ") : "Jamais deux créneaux en même temps sur le même ordi." });
+    // 20/11 (Mathieu) : jamais 2 comptes dans le même mode (même site, même mise) en même temps ; 10 min entre deux
+    const apres = c => Object.assign({}, c, { fin: hm(min(c.fin) + 10) });
+    const memeMode = [];
+    for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) {
+      const a = C[i], b = C[j];
+      if (!poker(a) || a.site !== b.site || a.qui === b.qui || Number(a.mise) !== Number(b.mise)) continue;
+      if (chevauche(apres(a), b) || chevauche(a, apres(b))) memeMode.push([a, b]);
+    }
+    const mise = c => c.mise ? " " + String(c.mise).replace(".", ",") + " €" : "";
+    R.push({ titre: "Jamais 2 comptes dans le même mode en même temps", ok: !memeMode.length, ids: memeMode.flat().map(c => c.id),
+             detail: memeMode.length ? memeMode.map(([a, b]) => nomSite(a.site) + mise(a) + " : " + a.qui + " et " + b.qui).join(" ; ")
+                    : "Même site et même mise : un seul compte à la fois, 10 min d'écart entre deux (sinon ils peuvent tomber à la même table)." });
+    const sansEcran = C.filter(c => poker(c) && !ecran(c.ecran));
+    R.push({ titre: "Un écran 1080p pour chaque robot", ok: !sansEcran.length, ids: sansEcran.map(c => c.id),
+             detail: sansEcran.length ? "Sans écran : " + sansEcran.map(titre).join(", ") : "Le robot n'est validé que sur un écran externe 1920x1080." });
+    const conflits = [], aPrevoir = [];
+    for (let i = 0; i < C.length; i++) for (let j = i + 1; j < C.length; j++) {
+      const a = C[i], b = C[j];
+      if (!a.ecran || a.ecran !== b.ecran || a.mac === b.mac || !chevauche(a, b)) continue;
+      (a.attente || b.attente ? aPrevoir : conflits).push([a, b]);
+    }
+    R.push({ titre: "Jamais deux ordis sur le même écran", ok: !conflits.length, prevoir: !conflits.length && aPrevoir.length > 0,
+             ids: conflits.flat().map(c => c.id),
+             detail: conflits.length ? conflits.map(([a, b]) => (ecran(a.ecran) || {}).nom + " : " + mac(a.mac).nom + " et " + mac(b.mac).nom).join(" ; ")
+                    : aPrevoir.length ? "Plus tard : " + aPrevoir.map(([a, b]) => (ecran(a.ecran) || {}).nom + " (" + mac(a.mac).nom + " et " + mac(b.mac).nom + ")").join(" ; ")
+                    : "Chaque écran ne sert qu'à un ordi à la fois." });
+    const minuit = C.filter(c => !c.info && min(c.fin) <= min(c.debut));
+    R.push({ titre: "Rien ne passe minuit", ok: !minuit.length, ids: minuit.map(c => c.id),
+             detail: minuit.length ? minuit.map(c => titre(c) + " " + c.debut + "–" + c.fin).join(", ") : "Le compteur du robot repart à zéro à minuit : un créneau finit avant." });
+    const serres = deplacements().filter(d => d.marge < 10);
+    R.push({ titre: "10 min pour déplacer un écran", ok: !serres.length, ids: serres.flatMap(d => [d.de.id, d.vers.id]),
+             detail: serres.length ? serres.map(d => d.ecran.nom + " : " + d.marge + " min entre " + mac(d.de.mac).nom + " et " + mac(d.vers.mac).nom).join(" ; ") : "Le temps de débrancher et rebrancher l'écran." });
+    return R;
+  }
+  // écran qui passe d'un ordi à l'autre (créneaux ouverts seulement), en faisant le tour de minuit
+  function deplacements() {
+    const D = [];
+    for (const e of plan.ecrans) {
+      const L = plan.creneaux.filter(c => c.ecran === e.id && !c.attente && morceaux(c).length).sort((a, b) => min(a.debut) - min(b.debut));
+      if (L.length < 2) continue;
+      for (let i = 0; i < L.length; i++) {
+        const de = L[i], vers = L[(i + 1) % L.length];
+        if (de.mac === vers.mac) continue;
+        const fin = min(de.fin), deb = min(vers.debut);
+        const marge = ((deb - fin) % 1440 + 1440) % 1440;
+        const quand = marge >= 10 ? (deb - 10 + 1440) % 1440 : fin;
+        D.push({ ecran: e, de, vers, marge, quand });
+      }
+    }
+    return D;
+  }
+
+  // ---------- missions ----------
+  function missions() {
+    const M = [];
+    for (const c of plan.creneaux) {
+      if (c.attente || c.info || !morceaux(c).length) continue;
+      const m = mac(c.mac);
+      if (poker(c)) M.push({ cle: "l-" + c.id + "-" + c.debut, t: min(c.debut), xp: 20,
+        txt: "Lancer " + titre(c) + (c.mise ? " à " + String(c.mise).replace(".", ",") + " €" : ""),
+        sous: m.nom + (ecran(c.ecran) ? " · " + ecran(c.ecran).nom : "") + " · START dans Carnet GO · fin prévue " + c.fin });
+      else M.push({ cle: "a-" + c.id + "-" + c.debut, t: min(c.debut), xp: 10, txt: c.qui + " : " + nomSite(c.site), sous: m.nom + " · jusqu'à " + c.fin });
+    }
+    for (const d of deplacements())
+      M.push({ cle: "e-" + d.ecran.id + "-" + d.de.id + "-" + d.vers.id, t: d.quand, xp: 15,
+        txt: "Déplacer l'" + d.ecran.nom.replace(/^Écran/, "écran"), sous: mac(d.de.mac).nom + " → " + mac(d.vers.mac).nom + " avant " + d.vers.debut });
+    return M.sort((a, b) => a.t - b.t || a.txt.localeCompare(b.txt));
+  }
+
+  // ---------- affichage ----------
+  function rendre() {
+    if (!plan) return;
+    const now = paris(), C = plan.creneaux, R = regles();
+    const erreurs = new Set(R.filter(r => !r.ok).flatMap(r => r.ids));
+    const ouverts = C.filter(c => poker(c) && !c.attente && !c.info), fermes = C.filter(c => poker(c) && c.attente && !c.info);
+    const h = ouverts.reduce((s, c) => s + jeu(duree(c)), 0) / 60;
+    const hFerme = fermes.reduce((s, c) => s + jeu(duree(c)), 0) / 60;
+
+    // score
+    let niv = NIVEAUX[0], suivant = null;
+    for (let i = 0; i < NIVEAUX.length; i++) if (h >= NIVEAUX[i].h) { niv = NIVEAUX[i]; suivant = NIVEAUX[i + 1] || null; }
+    document.documentElement.style.setProperty("--niv", niv.c);
+    $("pl-badge-h").textContent = Math.round(h) + " h";
+    $("pl-badge-n").textContent = niv.n;
+    $("pl-heures").textContent = "≈ " + Math.round(h) + " h";
+    const base = niv.h, haut = suivant ? suivant.h : Math.max(h, base + 1);
+    $("pl-barre").style.width = Math.min(100, (h - base) / (haut - base) * 100) + "%";
+    $("pl-prochain-niv").textContent = suivant ? "Encore " + Math.ceil(suivant.h - h) + " h pour le niveau " + suivant.n + (hFerme ? " (les créneaux verrouillés en donnent " + Math.round(hFerme) + ")" : "") : "Niveau maximum. Bravo.";
+    const live = ouverts.filter(c => actif(c, now.m));
+    $("pl-t-live").textContent = live.length;
+    const av = plan.avant_h || origine.avant_h;
+    $("pl-t-avant").innerHTML = av ? "<span class='" + (h >= av ? "pl-hausse" : "") + "'>" + (h >= av ? "+" : "−") + Math.abs(Math.round(h - av)) + " h</span>" : "–";
+    const nOk = R.filter(r => r.ok).length;
+    $("pl-t-quetes").textContent = nOk + " / " + R.length;
+    const pl = (n, m) => n + " " + m + (n > 1 ? "s" : "");
+    $("pl-sous").textContent = pl(plan.macs.length, "ordi") + " · " + pl(ouverts.length, "créneau") .replace("créneaus", "créneaux") + " de jeu · heure de Paris " + hm(now.m);
+
+    // frise des ordis
+    let html = "<div class='pl-grille'><div class='pl-ligne pl-regle'><div class='pl-nom'></div><div class='pl-heures'>";
+    for (let i = 0; i <= 24; i += 2) html += "<span style='left:" + (i / 24 * 100) + "%'>" + String(i % 24).padStart(2, "0") + "h</span>";
+    html += "</div></div>";
+    for (const m of plan.macs) {
+      const L = C.filter(c => c.mac === m.id);
+      html += "<div class='pl-ligne'><div class='pl-nom'><b><i style='background:" + esc(m.couleur) + "'></i>" + esc(m.nom) + "</b>" +
+        (m.lieu ? "<small>" + esc(m.lieu) + "</small>" : "") + "<button type='button' data-ajout='" + esc(m.id) + "'>+ créneau</button></div><div class='pl-piste'>";
+      for (const c of L) for (const [a, b] of morceaux(c)) {
+        const cl = ["pl-bloc"]; if (c.attente) cl.push("pl-verrou"); if (c.info) cl.push("pl-info"); if (erreurs.has(c.id)) cl.push("pl-erreur"); if (actif(c, now.m)) cl.push("pl-live");
+        const e = ecran(c.ecran);
+        html += "<button type='button' class='" + cl.join(" ") + "' data-id='" + esc(c.id) + "' style='left:" + (a / 1440 * 100) + "%;width:calc(" + ((b - a) / 1440 * 100) + "% - 3px);background:var(--" + (SITES[c.site] ? c.site : "autre") + ")'" +
+          " title='" + esc(titre(c) + " " + c.debut + "–" + c.fin + (c.note ? " · " + c.note : "")) + "'>" +
+          "<b>" + (c.attente ? "🔒 " : "") + esc(c.qui) + (actif(c, now.m) ? "<span class='pl-tag'>EN JEU</span>" : "") + "</b>" +
+          "<small>" + esc(nomSite(c.site)) + (c.mise ? " " + String(c.mise).replace(".", ",") + " €" : "") + " · " + c.debut + "–" + c.fin + "</small>" +
+          "<small>" + (c.attente ? "en attente d'accord" : c.info ? esc(c.note || "pour info") : e ? esc(e.nom) : poker(c) ? "⚠ sans écran" : esc(c.note || "")) + "</small></button>";
+      }
+      html += "</div></div>";
+    }
+    html += "<div class='pl-maintenant' data-h='" + hm(now.m) + "' style='left:calc(152px + (100% - 168px) * " + (now.m / 1440) + ")'></div></div>";
+    $("pl-frise-macs").innerHTML = html;
+    const vus = [...new Set(C.map(c => SITES[c.site] ? c.site : "autre"))];
+    $("pl-legende").innerHTML = vus.map(s => "<span><i style='background:var(--" + s + ")'></i>" + esc(nomSite(s)) + "</span>").join("") +
+      "<span><i style='background:repeating-linear-gradient(135deg,#94a3b8 0 3px,transparent 3px 6px)'></i>En attente d'accord</span>" +
+      "<span><i style='background:var(--rouge)'></i>Ligne rouge : maintenant</span>";
+
+    // frise des écrans
+    let he = "<div class='pl-grille'><div class='pl-ligne pl-regle'><div class='pl-nom'></div><div class='pl-heures'>";
+    for (let i = 0; i <= 24; i += 2) he += "<span style='left:" + (i / 24 * 100) + "%'>" + String(i % 24).padStart(2, "0") + "h</span>";
+    he += "</div></div>";
+    for (const e of plan.ecrans) {
+      const L = C.filter(c => c.ecran === e.id);
+      he += "<div class='pl-ligne' style='min-height:48px'><div class='pl-nom'><b>" + esc(e.nom) + "</b>" + (L.length ? "" : "<small>libre toute la journée</small>") + "</div><div class='pl-piste'>";
+      for (const c of L) for (const [a, b] of morceaux(c)) {
+        const m = mac(c.mac), cl = ["pl-bloc"]; if (c.attente) cl.push("pl-verrou"); if (erreurs.has(c.id)) cl.push("pl-erreur");
+        he += "<button type='button' class='" + cl.join(" ") + "' data-id='" + esc(c.id) + "' style='top:6px;bottom:6px;left:" + (a / 1440 * 100) + "%;width:calc(" + ((b - a) / 1440 * 100) + "% - 3px);background:" + esc(m.couleur) + "'>" +
+          "<b>" + esc(m.nom) + "</b><small>" + esc(c.qui) + " · " + c.debut + "–" + c.fin + "</small></button>";
+      }
+      he += "</div></div>";
+    }
+    he += "<div class='pl-maintenant' data-h='" + hm(now.m) + "' style='left:calc(152px + (100% - 168px) * " + (now.m / 1440) + ")'></div></div>";
+    $("pl-frise-ecrans").innerHTML = he;
+
+    // règles
+    $("pl-quetes").innerHTML = R.map(r => "<div class='pl-quete" + (r.ok ? (r.prevoir ? " pl-prevoir" : "") : " pl-ko") + "'><span class='pl-ico'>" + (r.ok ? (r.prevoir ? "!" : "✓") : "✗") + "</span><div><b>" + esc(r.titre) + "</b><small>" + esc(r.detail) + "</small></div></div>").join("");
+    $("pl-quetes-compte").textContent = nOk + " sur " + R.length + " respectées";
+
+    // missions
+    const M = missions();
+    let fait = {};
+    try { fait = JSON.parse(store.get(CLE_FAIT + now.jour) || "{}") || {}; } catch (e) { fait = {}; }
+    const suivante = M.find(x => !fait[x.cle] && x.t >= now.m - 5) || null;
+    $("pl-missions").innerHTML = M.map(x => "<li class='" + (fait[x.cle] ? "pl-fait" : "") + (x === suivante ? " pl-suivante" : "") + "'><span class='pl-h'>" + hm(x.t) + "</span>" +
+      "<label><input type='checkbox' data-m='" + esc(x.cle) + "'" + (fait[x.cle] ? " checked" : "") + "><span class='pl-txt'>" + esc(x.txt) + "<small>" + esc(x.sous) + "</small></span></label><span class='pl-xp'>+" + x.xp + " XP</span></li>").join("") ||
+      "<li>Aucun créneau ouvert.</li>";
+    const nFait = M.filter(x => fait[x.cle]).length, xp = M.filter(x => fait[x.cle]).reduce((s, x) => s + x.xp, 0), xpTot = M.reduce((s, x) => s + x.xp, 0);
+    $("pl-missions-compte").textContent = nFait + " / " + M.length + " · " + xp + " / " + xpTot + " XP";
+    $("pl-missions-barre").style.width = (xpTot ? xp / xpTot * 100 : 0) + "%";
+    $("pl-bravo").classList.toggle("pl-oui", M.length > 0 && nFait === M.length);
+    if (suivante) {
+      const dt = suivante.t - now.m;
+      $("pl-t-suite").textContent = dt <= 0 ? "maintenant" : "dans " + hTxt(dt);
+      $("pl-t-suite-txt").textContent = suivante.txt;
+    } else { $("pl-t-suite").textContent = "–"; $("pl-t-suite-txt").textContent = "plus de mission aujourd'hui"; }
+
+    // à débloquer
+    $("pl-coffre-h").textContent = "+" + Math.round(hFerme) + " h";
+    $("pl-coffre").innerHTML = fermes.length ? fermes.map(c => "<li><b>" + esc(titre(c)) + "</b> · " + esc(mac(c.mac).nom) + " · " + c.debut + "–" + c.fin + "</li>").join("") : "<li>Rien en attente.</li>";
+    const ecransFermes = plan.ecrans.filter(e => { const L = C.filter(c => c.ecran === e.id); return L.length && L.every(c => c.attente); });
+    $("pl-coffre-ecran").textContent = ecransFermes.length ? "Il faudra aussi : " + ecransFermes.map(e => e.nom.toLowerCase()).join(", ") + " (aucun créneau ouvert ne s'en sert)." : "Aucun écran en plus à prévoir.";
+
+    // ordis et écrans
+    $("pl-macs").innerHTML = plan.macs.map(m => {
+      const n = C.filter(c => c.mac === m.id).length;
+      return "<div class='pl-rangee'><i style='background:" + esc(m.couleur) + "'></i><input class='pl-champ' data-mac-nom='" + esc(m.id) + "' value='" + esc(m.nom) + "' maxlength='30' aria-label='Nom de l ordi'>" +
+        "<input class='pl-champ pl-lieu' data-mac-lieu='" + esc(m.id) + "' value='" + esc(m.lieu || "") + "' maxlength='30' placeholder='où il est' aria-label='Où il est'>" +
+        "<button class='pl-x' type='button' data-mac-x='" + esc(m.id) + "'" + (n ? " disabled title='Il a encore " + n + " créneau(x)'" : " title='Retirer'") + ">×</button></div>";
+    }).join("");
+    $("pl-ecrans").innerHTML = plan.ecrans.map(e => {
+      const n = C.filter(c => c.ecran === e.id).length;
+      return "<div class='pl-rangee pl-sans-lieu'><i style='background:var(--texte-3)'></i><input class='pl-champ' data-ecran-nom='" + esc(e.id) + "' value='" + esc(e.nom) + "' maxlength='30' aria-label='Nom de l écran'>" +
+        "<button class='pl-x' type='button' data-ecran-x='" + esc(e.id) + "'" + (n ? " disabled title='Il sert à " + n + " créneau(x)'" : " title='Retirer'") + ">×</button></div>";
+    }).join("");
+
+    $("pl-etat").textContent = plan.modifie ? "Modifié sur cet appareil le " + new Date(plan.modifie).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "Plan d'origine (" + (plan.version || "") + ")";
+  }
+
+  // ---------- édition ----------
+  let enCours = null;
+  function options(sel, liste, val) { sel.innerHTML = liste.map(([v, t]) => "<option value='" + esc(v) + "'" + (String(v) === String(val) ? " selected" : "") + ">" + esc(t) + "</option>").join(""); }
+  function ouvrir(c, nouveau) {
+    enCours = { c: copie(c), nouveau };
+    $("pl-f-titre").textContent = nouveau ? "Nouveau créneau" : "Changer le créneau";
+    $("pl-f-qui").value = c.qui || "";
+    options($("pl-f-site"), Object.entries(SITES).map(([k, s]) => [k, s.nom]), c.site);
+    $("pl-f-debut").value = c.debut; $("pl-f-fin").value = c.fin;
+    options($("pl-f-mac"), plan.macs.map(m => [m.id, m.nom]), c.mac);
+    $("pl-f-mise").value = c.mise == null ? "" : String(c.mise);
+    options($("pl-f-ecran"), [["", "Aucun écran"]].concat(plan.ecrans.map(e => [e.id, e.nom])), c.ecran || "");
+    $("pl-f-attente").checked = !!c.attente;
+    $("pl-f-note").value = c.note || "";
+    $("pl-f-err").textContent = "";
+    $("pl-f-suppr").style.display = $("pl-f-dupli").style.display = nouveau ? "none" : "";
+    const d = $("pl-dlg");
+    if (d.showModal) d.showModal(); else d.setAttribute("open", "");
+  }
+  function fermer() { const d = $("pl-dlg"); if (d.close) d.close(); else d.removeAttribute("open"); enCours = null; }
+  function lire() {
+    const c = enCours.c;
+    c.qui = $("pl-f-qui").value.trim(); c.site = $("pl-f-site").value;
+    c.debut = $("pl-f-debut").value; c.fin = $("pl-f-fin").value; c.mac = $("pl-f-mac").value;
+    const mi = $("pl-f-mise").value; if (mi) c.mise = +mi; else delete c.mise;
+    c.ecran = $("pl-f-ecran").value;
+    if ($("pl-f-attente").checked) c.attente = true; else delete c.attente;
+    const n = $("pl-f-note").value.trim(); if (n) c.note = n; else delete c.note;
+    if (!c.qui) return "Mets un prénom.";
+    if (min(c.debut) == null || min(c.fin) == null) return "Mets une heure de début et de fin.";
+    if (c.debut === c.fin) return "Le début et la fin sont pareils.";
+    return null;
+  }
+  const nouvelId = () => "c" + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+  $("pl-f-ok").onclick = () => {
+    const err = lire(); if (err) { $("pl-f-err").textContent = err; return; }
+    const c = enCours.c, i = plan.creneaux.findIndex(x => x.id === c.id);
+    if (i >= 0) plan.creneaux[i] = c; else plan.creneaux.push(c);
+    fermer(); sauver();
+  };
+  $("pl-f-annuler").onclick = fermer;
+  $("pl-f-suppr").onclick = () => {
+    const b = $("pl-f-suppr");
+    if (b.dataset.sur !== "1") { b.dataset.sur = "1"; b.textContent = "Sûr ? Re-clique"; setTimeout(() => { b.dataset.sur = ""; b.textContent = "Supprimer"; }, 3000); return; }
+    b.dataset.sur = ""; b.textContent = "Supprimer";
+    plan.creneaux = plan.creneaux.filter(x => x.id !== enCours.c.id); fermer(); sauver();
+  };
+  $("pl-f-dupli").onclick = () => {
+    const err = lire(); if (err) { $("pl-f-err").textContent = err; return; }
+    const c = copie(enCours.c); c.id = nouvelId(); fermer(); ouvrir(c, true);
+  };
+  $("pl-dlg").addEventListener("click", e => { if (e.target === $("pl-dlg")) fermer(); });
+
+  document.addEventListener("click", e => {
+    const bloc = e.target.closest("[data-id]");
+    if (bloc) { const c = plan.creneaux.find(x => x.id === bloc.dataset.id); if (c) ouvrir(c, false); return; }
+    const aj = e.target.closest("[data-ajout]");
+    if (aj) { ouvrir({ id: nouvelId(), mac: aj.dataset.ajout, qui: "", site: "unibet", mise: 1, debut: "09:00", fin: "17:40", ecran: "" }, true); return; }
+    const mx = e.target.closest("[data-mac-x]");
+    if (mx && !mx.disabled) { plan.macs = plan.macs.filter(m => m.id !== mx.dataset.macX); sauver(); return; }
+    const ex = e.target.closest("[data-ecran-x]");
+    if (ex && !ex.disabled) { plan.ecrans = plan.ecrans.filter(x => x.id !== ex.dataset.ecranX); sauver(); return; }
+    const cb = e.target.closest("[data-m]");
+    if (cb) {
+      const j = paris().jour; let f = {};
+      try { f = JSON.parse(store.get(CLE_FAIT + j) || "{}") || {}; } catch (er) { f = {}; }
+      if (cb.checked) f[cb.dataset.m] = 1; else delete f[cb.dataset.m];
+      store.set(CLE_FAIT + j, JSON.stringify(f));
+      rendre();
+    }
+  });
+  document.addEventListener("change", e => {
+    const t = e.target, v = (t.value || "").trim();
+    if (t.dataset.macNom && v) { mac(t.dataset.macNom).nom = v; sauver(); }
+    else if (t.dataset.macLieu != null && t.dataset.macLieu !== "") { mac(t.dataset.macLieu).lieu = v; sauver(); }
+    else if (t.dataset.ecranNom && v) { ecran(t.dataset.ecranNom).nom = v; sauver(); }
+  });
+  $("pl-ajout-mac").onclick = () => {
+    const id = "m" + Date.now().toString(36), c = COULEURS_MAC[plan.macs.length % COULEURS_MAC.length];
+    plan.macs.push({ id, nom: "Nouvel ordi", lieu: "", couleur: c }); sauver();
+  };
+  $("pl-ajout-ecran").onclick = () => { plan.ecrans.push({ id: "e" + Date.now().toString(36), nom: "Nouvel écran" }); sauver(); };
+  $("pl-reset").onclick = () => {
+    const b = $("pl-reset");
+    if (b.dataset.sur !== "1") { b.dataset.sur = "1"; b.textContent = "Sûr ? Tes changements partent"; setTimeout(() => { b.dataset.sur = ""; b.textContent = "Revenir au plan d'origine"; }, 3500); return; }
+    b.dataset.sur = ""; b.textContent = "Revenir au plan d'origine";
+    store.del(CLE_PLAN); plan = copie(origine); rendre();
+  };
+  $("pl-commandes").onclick = () => { location.href = "commandes.html#" + cleTexte; };
+  $("pl-partager").onclick = async () => {
+    if (!plan) return;
+    const octets = new TextEncoder().encode(JSON.stringify(plan));
+    let s = ""; for (const o of octets) s += String.fromCharCode(o);
+    const lien = location.origin + location.pathname + "#" + cleTexte + "&plan=" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const b = $("pl-partager");
+    try { await navigator.clipboard.writeText(lien); b.textContent = "Lien copié ✓"; }
+    catch (e) { window.prompt("Copie ce lien :", lien); }
+    setTimeout(() => { b.textContent = "Partager ce planning"; }, 2500);
+  };
+
+  demarrer();
+})();
+</script>
+</body>
+</html>

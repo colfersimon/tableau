@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Carnet · Gains</title>
+<style>
+/* 11/11/2026 : page Gains. Données chiffrées (gains.enc), clé après le # (jamais envoyée). Couleurs des personnes validées
+   (validateur dataviz : 6 teintes, ordre fixe, sombre et clair). Une couleur = une personne, partout. */
+:root {
+  color-scheme: light;
+  --fond: #f4f3ef; --fond2: #ecebe5; --carte: #ffffff; --carte2: #f8f7f3; --trait: rgba(15,15,20,.08); --trait2: rgba(15,15,20,.14);
+  --t1: #0d0e12; --t2: #4f525c; --t3: #8a8d96; --pos: #0b8a3e; --neg: #d23a3a; --pos-f: rgba(11,138,62,.10); --neg-f: rgba(210,58,58,.09);
+  --grille: #e6e4dd; --axe: #c9c6bc; --ombre: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+  --p1: #2a78d6; --p2: #eb6834; --p3: #1baf7a; --p4: #eda100; --p5: #e87ba4; --p6: #6250d6; --gris: #9a9ca4;
+  --crit: #d03b3b; --alerte: #e08a00; --info: #2a78d6; --ok: #0ca30c;
+  --halo1: rgba(98,80,214,.10); --halo2: rgba(27,175,122,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --fond: #0b0d12; --fond2: #10131a; --carte: #151821; --carte2: #1a1e29; --trait: rgba(255,255,255,.07); --trait2: rgba(255,255,255,.12);
+    --t1: #f2f3f6; --t2: #b4b8c3; --t3: #7d828f; --pos: #2fd47a; --neg: #ff6470; --pos-f: rgba(47,212,122,.10); --neg-f: rgba(255,100,112,.10);
+    --grille: #232733; --axe: #343948; --ombre: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px rgba(0,0,0,.35);
+    --p1: #3987e5; --p2: #d95926; --p3: #199e70; --p4: #c98500; --p5: #d55181; --p6: #9085e9; --gris: #6f7480;
+    --crit: #ff5d5d; --alerte: #ffb020; --info: #5aa9ff; --ok: #2fd47a;
+    --halo1: rgba(144,133,233,.16); --halo2: rgba(25,158,112,.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fond: #0b0d12; --fond2: #10131a; --carte: #151821; --carte2: #1a1e29; --trait: rgba(255,255,255,.07); --trait2: rgba(255,255,255,.12);
+  --t1: #f2f3f6; --t2: #b4b8c3; --t3: #7d828f; --pos: #2fd47a; --neg: #ff6470; --pos-f: rgba(47,212,122,.10); --neg-f: rgba(255,100,112,.10);
+  --grille: #232733; --axe: #343948; --ombre: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px rgba(0,0,0,.35);
+  --p1: #3987e5; --p2: #d95926; --p3: #199e70; --p4: #c98500; --p5: #d55181; --p6: #9085e9; --gris: #6f7480;
+  --crit: #ff5d5d; --alerte: #ffb020; --info: #5aa9ff; --ok: #2fd47a;
+  --halo1: rgba(144,133,233,.16); --halo2: rgba(25,158,112,.12);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--fond); color: var(--t1); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Inter, sans-serif; min-height: 100vh; }
+body::before { content: ""; position: fixed; inset: -20vmax -10vmax auto auto; width: 70vmax; height: 70vmax; pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, var(--halo1), transparent 70%); }
+body::after { content: ""; position: fixed; inset: auto auto -25vmax -15vmax; width: 70vmax; height: 70vmax; pointer-events: none; z-index: 0;
+  background: radial-gradient(closest-side, var(--halo2), transparent 70%); }
+.page { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 6px 16px 60px; }
+.carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 22px; box-shadow: var(--ombre); padding: 20px; }
+.titre { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+.titre h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--t3); }
+.titre .note { font-size: 13px; color: var(--t3); }
+section { margin-top: 18px; }
+.num { font-variant-numeric: tabular-nums; }
+.pos { color: var(--pos); } .neg { color: var(--neg); } .nul { color: var(--t3); }
+.doux { color: var(--t2); } .tres-doux { color: var(--t3); }
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+
+/* ---------- message (clé, chargement) */
+#msg { margin: 40px auto; max-width: 520px; text-align: center; color: var(--t2); }
+#msg b { color: var(--t1); }
+
+/* ---------- héros */
+.hero { padding: 26px 24px 22px; position: relative; overflow: hidden; }
+.hero-haut { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hero-jour { font-size: 14px; font-weight: 650; color: var(--t2); letter-spacing: .01em; }
+.direct { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t2); font-weight: 600;
+  padding: 6px 11px; border-radius: 999px; background: var(--carte2); border: 1px solid var(--trait); }
+.pouls { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(47,212,122,.55); animation: pouls 2s infinite; }
+.pouls.eteint { background: var(--t3); animation: none; }
+@keyframes pouls { 0% { box-shadow: 0 0 0 0 rgba(47,212,122,.5); } 70% { box-shadow: 0 0 0 8px rgba(47,212,122,0); } 100% { box-shadow: 0 0 0 0 rgba(47,212,122,0); } }
+.hero-montant { font-size: clamp(56px, 13vw, 112px); font-weight: 800; letter-spacing: -.045em; line-height: .95; margin: 18px 0 6px; }
+.hero-montant .cts { font-size: .42em; letter-spacing: -.02em; opacity: .75; margin-left: .04em; }
+.hero-sous { color: var(--t2); font-size: 15px; display: flex; gap: 6px 14px; flex-wrap: wrap; }
+.hero-sous b { color: var(--t1); font-weight: 650; }
+.poches-titre { margin: 22px 0 10px; font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--t3); }
+.poches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.poche { border-radius: 16px; padding: 12px 12px 11px; background: var(--carte2); border: 1px solid var(--trait); min-width: 0; position: relative; }
+.poche .qui { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pastille { width: 22px; height: 22px; border-radius: 50%; flex: none; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; }
+.poche .combien { font-size: 21px; font-weight: 750; letter-spacing: -.02em; margin-top: 7px; white-space: nowrap; }
+.poche .pct { font-size: 12px; color: var(--t3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poche.vide .combien { font-size: 15px; color: var(--t3); font-weight: 600; }
+
+/* ---------- robots en direct */
+.robots { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.robot { padding: 16px; border-radius: 18px; background: var(--carte); border: 1px solid var(--trait); box-shadow: var(--ombre); position: relative; overflow: hidden; }
+.robot::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--c, var(--gris)); }
+.robot .haut { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.robot .nom { font-weight: 750; font-size: 17px; letter-spacing: -.01em; }
+.robot .ou { font-size: 12.5px; color: var(--t3); margin-top: 1px; }
+.etat { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.etat i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+.etat.jeu { color: var(--ok); background: var(--pos-f); }
+.etat.pause { color: var(--alerte); background: rgba(224,138,0,.10); }
+.etat.arret { color: var(--t3); background: var(--carte2); }
+.etat.panne { color: var(--crit); background: var(--neg-f); }
+.robot .gain { font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin: 12px 0 2px; }
+.robot .chiffres { font-size: 13px; color: var(--t2); display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.robot svg { display: block; width: 100%; height: 44px; margin-top: 10px; }
+.robot .bas { font-size: 12.5px; color: var(--t3); margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; }
+
+/* ---------- périodes */
+.seg { display: flex; gap: 4px; background: var(--carte2); border: 1px solid var(--trait); padding: 4px; border-radius: 14px; overflow-x: auto; scrollbar-width: none; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { border: 0; background: transparent; padding: 8px 13px; border-radius: 10px; font-weight: 650; font-size: 14px; color: var(--t2); cursor: pointer; white-space: nowrap; flex: 1 0 auto; }
+.seg button.ici { background: var(--carte); color: var(--t1); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.nav-periode { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 6px; }
+.nav-periode .lib { font-size: 20px; font-weight: 750; letter-spacing: -.02em; text-align: center; flex: 1; }
+.nav-periode .lib small { display: block; font-size: 12.5px; font-weight: 600; color: var(--t3); letter-spacing: 0; margin-top: 2px; }
+.fleche { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--trait); background: var(--carte2); cursor: pointer; font-size: 18px; display: grid; place-items: center; flex: none; }
+.fleche:disabled { opacity: .3; cursor: default; }
+.periode-total { text-align: center; font-size: clamp(40px, 8vw, 64px); font-weight: 800; letter-spacing: -.04em; margin: 4px 0 2px; }
+.periode-sous { text-align: center; color: var(--t2); font-size: 14px; display: flex; justify-content: center; gap: 4px 14px; flex-wrap: wrap; }
+.ecart { font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 8px; }
+.ecart.pos { background: var(--pos-f); } .ecart.neg { background: var(--neg-f); }
+.grille2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 20px; }
+.grille2 > * { min-width: 0; }
+.barres-poches .ligne { display: grid; grid-template-columns: 92px 1fr 104px; align-items: center; gap: 10px; padding: 7px 0; }
+.barres-poches .qui { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 14px; }
+.barres-poches .piste { height: 10px; border-radius: 6px; background: var(--grille); position: relative; overflow: hidden; }
+.barres-poches .remp { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
+.barres-poches .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bilan { margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: var(--carte2); border: 1px solid var(--trait); color: var(--t2); font-size: 14.5px; }
+.bilan b { color: var(--t1); }
+.bilan p { margin: 0 0 6px; } .bilan p:last-child { margin: 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--t3); padding: 0 8px 8px; white-space: nowrap; }
+td { padding: 9px 8px; border-top: 1px solid var(--trait); vertical-align: middle; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.compte-nom { display: flex; align-items: center; gap: 8px; font-weight: 650; white-space: nowrap; }
+.defile { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -8px; padding: 0 8px; }
+
+/* ---------- graphes */
+.onglets-g { display: inline-flex; gap: 4px; background: var(--carte2); border: 1px solid var(--trait); padding: 3px; border-radius: 11px; }
+.onglets-g button { border: 0; background: transparent; padding: 6px 11px; border-radius: 8px; font-weight: 650; font-size: 13px; color: var(--t2); cursor: pointer; }
+.onglets-g button.ici { background: var(--carte); color: var(--t1); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.graphe { position: relative; }
+.graphe svg { display: block; width: 100%; overflow: visible; }
+.legende { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--t2); margin: 0 0 10px; }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.legende i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.bulle { position: absolute; pointer-events: none; z-index: 5; background: var(--carte); border: 1px solid var(--trait2); border-radius: 12px; padding: 10px 12px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25); font-size: 13px; min-width: 170px; opacity: 0; transition: opacity .12s; }
+.bulle.vue { opacity: 1; }
+.bulle .t { font-weight: 750; margin-bottom: 6px; }
+.bulle .l { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0; }
+.bulle .l span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--t2); }
+.bulle .l b { font-variant-numeric: tabular-nums; }
+.point { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+/* ---------- jour par jour (une ligne par jour, les poches dessous : lisible au téléphone comme sur l'ordinateur) */
+.jl { border-top: 1px solid var(--trait); }
+.jl:first-child { border-top: 0; }
+.jl-haut { display: grid; grid-template-columns: minmax(0, 1fr) auto 74px 18px; align-items: center; gap: 10px; padding: 11px 6px 4px; cursor: pointer; border-radius: 10px; }
+.jl-haut:hover { background: var(--carte2); }
+.jl-haut .g { font-weight: 750; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jl-haut .t { text-align: right; color: var(--t3); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jl-haut .fl { color: var(--t3); font-size: 12px; text-align: center; }
+.jl-poches { display: flex; flex-wrap: wrap; gap: 3px 14px; padding: 0 6px 11px; font-size: 13px; cursor: pointer; }
+.jl-poches > span { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+.jl-detail { background: var(--carte2); border-radius: 14px; padding: 12px 14px 14px; margin: 0 0 12px; }
+.formule { display: grid; grid-template-columns: minmax(150px, 1.4fr) 1fr; gap: 4px 14px; font-size: 13.5px; }
+.formule .f { color: var(--t2); font-variant-numeric: tabular-nums; }
+.formule .f b { color: var(--t1); }
+.formule h4 { grid-column: 1 / -1; margin: 10px 0 2px; font-size: 13px; color: var(--t1); }
+.formule h4:first-child { margin-top: 0; }
+.badge { font-size: 11.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--carte2); border: 1px solid var(--trait); color: var(--t3); }
+
+/* ---------- CTV, soldes, problèmes, règles */
+.anneau { display: flex; align-items: center; gap: 20px; }
+.anneau svg { width: 120px; height: 120px; flex: none; }
+.anneau .gros { font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+.pb { display: grid; grid-template-columns: 26px 1fr; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--trait); }
+.pb:first-of-type { border-top: 0; }
+.pb .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; font-weight: 800; }
+.pb.critique .ic { background: var(--neg-f); color: var(--crit); }
+.pb.alerte .ic { background: rgba(224,138,0,.12); color: var(--alerte); }
+.pb.info .ic { background: rgba(42,120,214,.10); color: var(--info); }
+.pb.regle .ic { background: var(--pos-f); color: var(--ok); }
+.pb .tt { font-weight: 700; }
+.pb .dd { color: var(--t2); font-size: 13.5px; grid-column: 2; }
+.pb .aa { color: var(--t3); font-size: 13px; grid-column: 2; }
+.pb .qd { color: var(--t3); font-size: 12px; font-weight: 600; margin-left: 6px; }
+.pb.regle .tt { color: var(--t3); font-weight: 600; text-decoration: line-through; text-decoration-color: var(--t3); }
+.aucun { color: var(--ok); font-weight: 650; display: flex; gap: 8px; align-items: center; }
+.regle { margin-bottom: 16px; }
+.regle .nom { font-weight: 700; margin-bottom: 8px; }
+.empile { display: flex; height: 34px; border-radius: 10px; overflow: hidden; gap: 2px; }
+.empile div { display: grid; place-items: center; color: #fff; font-size: 12.5px; font-weight: 750; min-width: 0; white-space: nowrap; overflow: hidden; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.regle .legende-r { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--t2); margin-top: 8px; }
+.regle .legende-r span { display: inline-flex; align-items: center; gap: 6px; }
+.regle .qui-sont { font-size: 13px; color: var(--t3); margin-top: 7px; }
+.pied { margin-top: 26px; text-align: center; color: var(--t3); font-size: 13px; line-height: 1.7; }
+.pied a { color: var(--t2); font-weight: 650; }
+.bouton-feuille { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; background: var(--carte); border: 1px solid var(--trait2); text-decoration: none; font-weight: 700; color: var(--t1); margin-bottom: 10px; }
+
+@media (max-width: 920px) {
+  .poches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grille2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .page { padding: 4px 12px 50px; }
+  .carte { padding: 16px; border-radius: 18px; }
+  .hero { padding: 20px 16px 16px; }
+  .poches { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .poche .combien { font-size: 19px; }
+  .barres-poches .ligne { grid-template-columns: 78px 1fr 92px; }
+  .formule { grid-template-columns: 1fr; }
+  .anneau svg { width: 96px; height: 96px; }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; }
+  .seg button { padding: 8px 4px; font-size: 13.5px; }
+  .jl-haut { grid-template-columns: minmax(0, 1fr) auto 18px; }
+  .jl-haut .t { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pouls { animation: none; } }
+</style>
+</head>
+<body>
+<!-- 11/11 : barre commune des 4 pages (Tableau, Suivi, Simulateur, Commandes), ajoutée par publier.py juste après <body>.
+     Garde la clé (#...) d'une page à l'autre. Classes préfixées cn- : rien ne se mélange avec le style de la page. -->
+<style id="cn-style">
+.cn-barre{position:sticky;top:0;z-index:50;margin:0 0 14px;padding:10px 16px;
+  background:rgba(250,249,246,.82);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid rgba(0,0,0,.07);font:15px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
+.cn-in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cn-marque{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.02em;font-size:17px;color:#16140f;text-decoration:none}
+.cn-logo{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#1f9d63 0%,#0f6e8c 55%,#6b4fd8 100%);
+  box-shadow:0 2px 8px rgba(31,157,99,.35);display:inline-block;position:relative}
+.cn-logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(255,255,255,.9)}
+.cn-onglets{display:flex;gap:4px;background:rgba(0,0,0,.05);padding:4px;border-radius:12px;overflow-x:auto;max-width:100%}
+.cn-onglets a{padding:7px 12px;border-radius:9px;color:#4a463e;text-decoration:none;font-weight:600;font-size:14px;white-space:nowrap}
+.cn-onglets a:hover{color:#16140f;background:rgba(255,255,255,.6)}
+.cn-onglets a.cn-ici{background:#fff;color:#16140f;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cn-direct{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:#6b665c;font-weight:600}
+.cn-point{width:8px;height:8px;border-radius:50%;background:#1f9d63;box-shadow:0 0 0 0 rgba(31,157,99,.6);animation:cn-pouls 2s infinite}
+@keyframes cn-pouls{0%{box-shadow:0 0 0 0 rgba(31,157,99,.55)}70%{box-shadow:0 0 0 7px rgba(31,157,99,0)}100%{box-shadow:0 0 0 0 rgba(31,157,99,0)}}
+@media (prefers-color-scheme:dark){
+  .cn-barre{background:rgba(20,20,22,.78);border-bottom-color:rgba(255,255,255,.08)}
+  .cn-marque{color:#f3f1ec}.cn-onglets{background:rgba(255,255,255,.07)}
+  .cn-onglets a{color:#b9b4aa}.cn-onglets a:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .cn-onglets a.cn-ici{background:#2c2c30;color:#fff;box-shadow:none}.cn-direct{color:#9c978d}}
+@media (max-width:560px){.cn-barre{padding:8px 12px}.cn-direct{display:none}.cn-in{gap:8px}.cn-onglets{flex:1}.cn-onglets a{flex:1;text-align:center;padding:7px 6px}}
+@media print{.cn-barre{display:none}}
+</style>
+<nav class="cn-barre" aria-label="Pages du carnet"><div class="cn-in">
+  <a class="cn-marque" data-cn="index.html" href="#"><span class="cn-logo"></span>Carnet</a>
+  <div class="cn-onglets">
+    <a data-cn="index.html" href="#">Tableau</a>
+    <a data-cn="suivi.html" href="#">Suivi</a>
+    <a data-cn="simulateur.html" href="#">Simulateur</a>
+    <a data-cn="commandes.html" href="#">Commandes</a>
+  </div>
+  <span class="cn-direct"><span class="cn-point"></span>4 Mac · mis à jour toutes les 2 min</span>
+</div></nav>
+<script id="cn-script">
+(function () {
+  var page = (location.pathname.split('/').pop() || 'index.html');
+  if (page.indexOf('.html') < 0) page = 'index.html';
+  var liens = document.querySelectorAll('.cn-barre a[data-cn]');
+  function maj() {
+    for (var i = 0; i < liens.length; i++) {
+      var a = liens[i], cible = a.getAttribute('data-cn');
+      a.setAttribute('href', cible + (location.hash || '').split('&')[0]);      // la clé seule (le simulateur ajoute &scénario)
+      if (cible === page && a.className.indexOf('cn-marque') < 0) a.className = 'cn-ici';
+    }
+  }
+  maj();
+  window.addEventListener('hashchange', maj);
+})();
+</script>
+
+<div class="page">
+  <div id="msg">Chargement des chiffres…</div>
+  <div id="app" hidden>
+    <section class="carte hero" id="hero"></section>
+    <section id="robots-s"><div class="titre"><h2>En direct</h2><span class="note" id="robots-note"></span></div><div class="robots" id="robots"></div></section>
+    <section class="carte" id="periode-s">
+      <div class="titre"><h2>Bilan</h2><span class="note">touche une période</span></div>
+      <div class="seg" id="seg"></div>
+      <div class="nav-periode"><button class="fleche" id="avant" aria-label="Période d'avant">‹</button><div class="lib" id="p-lib"></div><button class="fleche" id="apres" aria-label="Période d'après">›</button></div>
+      <div class="periode-total" id="p-total"></div>
+      <div class="periode-sous" id="p-sous"></div>
+      <div class="grille2">
+        <div><div class="titre"><h2>Dans la poche</h2><span class="note" id="p-poches-note"></span></div><div class="barres-poches" id="p-poches"></div></div>
+        <div><div class="titre"><h2>Par compte</h2></div><div class="defile"><table id="p-comptes"></table></div></div>
+      </div>
+      <div class="bilan" id="p-bilan"></div>
+    </section>
+    <section class="carte" id="graphes-s">
+      <div class="titre"><h2 id="g1-titre">Gains par jour</h2><span class="note">survole une barre</span></div>
+      <div class="graphe" id="g1"></div>
+    </section>
+    <section class="carte">
+      <div class="titre"><h2>Cumul</h2><div class="onglets-g" id="g2-mode"><button data-m="personnes">Par personne</button><button data-m="comptes">Par compte</button></div></div>
+      <div class="legende" id="g2-leg"></div>
+      <div class="graphe" id="g2"></div>
+    </section>
+    <section class="carte">
+      <div class="titre"><h2>Jour par jour</h2><span class="note">touche un jour pour voir le calcul</span></div>
+      <div id="jours"></div>
+      <div style="text-align:center;margin-top:12px"><button class="fleche" style="width:auto;padding:0 16px;height:38px;display:inline-grid" id="plus-jours">Voir plus de jours</button></div>
+    </section>
+    <div class="grille2" style="margin-top:18px">
+      <section class="carte" style="margin:0" id="ctv"></section>
+      <section class="carte" style="margin:0" id="soldes"></section>
+    </div>
+    <section class="carte" id="problemes"></section>
+    <section class="carte" id="regles"></section>
+    <div class="pied" id="pied"></div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  const DONNEES = "https://raw.githubusercontent.com/colfersimon/tableau/donnees/gains.enc";
+  const RAFRAICHIR_MS = 60000;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const f2 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+  const f1 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  const signe = x => x > 0.004 ? "+" : x < -0.004 ? "−" : "";
+  const eur = x => x == null ? "–" : signe(x) + f2.format(Math.abs(x)) + " €";
+  const eurC = x => x == null ? "–" : signe(x) + f0.format(Math.abs(x)) + " €";
+  const cls = x => x == null ? "nul" : x > 0.004 ? "pos" : x < -0.004 ? "neg" : "nul";
+  const pct = x => x == null ? "–" : f0.format(x * 100) + " %";
+  const heures = h => { if (!h) return "0 min"; const m = Math.round(h * 60); return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0"); };
+  const JS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  const dcourt = s => { const d = new Date(s + "T12:00:00"); return JS[d.getDay()] + " " + s.slice(8, 10) + "/" + s.slice(5, 7); };
+  const ddm = s => s.slice(8, 10) + "/" + s.slice(5, 7);
+  const hm = iso => iso ? String(iso).slice(11, 16) : "?";
+  const ETATS = { EN_SESSION: ["jeu", "En jeu"], PAUSE: ["pause", "En pause"], FIN_DE_CRENEAU: ["pause", "Finit ses tables"], ARRETE: ["arret", "Arrêté"] };
+  const TYPES = [["jour", "Jour"], ["semaine", "Semaine"], ["mois", "Mois"], ["trimestre", "3 mois"], ["semestre", "6 mois"], ["annee", "Année"], ["tout", "Tout"]];
+
+  let D = null, cle = null, etatUI = { type: "jour", idx: 0, mode: null, ouverts: {}, nJours: 14, anime: true };
+  let couleurs = {}, personnes = [], nomP = {}, comptes = [], cpt = {};
+
+  // ---------------------------------------------------------------- chargement
+  function cleDuLien() {
+    const h = location.hash.replace(/^#/, "").split("&")[0].replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  async function dechiffrer(k, texte) {
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kMac = await crypto.subtle.importKey("raw", k.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", k.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct)));
+  }
+  async function charger() {
+    const q = new URLSearchParams(location.search), local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const essai = local && q.get("essai");                                  // essais sur ce Mac seulement (fichier en clair)
+    if (essai) { const r = await fetch(essai + "?t=" + Date.now(), { cache: "no-store" }); return r.json(); }
+    if (!cle) throw new Error("pas de clé");
+    const src = (local && q.get("source")) || DONNEES;                       // essai local du déchiffrement (clé d'essai)
+    const r = await fetch(src + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+    if (!r.ok) throw new Error("données pas encore publiées (" + r.status + ")");
+    return dechiffrer(cle, await r.text());
+  }
+  async function boucle() {
+    try {
+      const x = await charger();
+      const neuf = !D || x.fait !== D.fait;
+      D = x;
+      if (neuf) dessiner();
+      $("msg").hidden = true; $("app").hidden = false;
+    } catch (e) {
+      if (!D) $("msg").innerHTML = e.message === "pas de clé" ? "Ouvre cette page avec <b>le lien complet</b> (celui qui finit par une longue clé après le #)." :
+        e.message === "clé fausse" ? "<b>La clé du lien n'est pas la bonne.</b> Reprends le lien complet." : "Chargement impossible : " + esc(e.message) + ". Nouvel essai dans une minute.";
+    }
+    setTimeout(boucle, RAFRAICHIR_MS);
+  }
+
+  // ---------------------------------------------------------------- outils
+  function preparer() {
+    personnes = D.personnes || [];
+    nomP = {}; couleurs = {};
+    personnes.forEach((p, i) => { nomP[p.id] = p.nom; couleurs[p.id] = "var(--p" + (i + 1) + ")"; });
+    comptes = D.comptes || []; cpt = {};
+    comptes.forEach(c => { cpt[c.id] = c; });
+  }
+  const couleurCompte = c => (c && c.titulaire && couleurs[c.titulaire]) || (c && c.regle === "simon" ? couleurs.simon : "var(--gris)");
+  const qui = c => c.titulaire_nom || (c.regle === "simon" ? "Simon" : (c.nom || c.id).split(" · ")[0]);
+  const initiale = n => esc(String(n || "?").slice(0, 1).toUpperCase());
+  const pastille = (id, n) => `<span class="pastille" style="background:${couleurs[id] || "var(--gris)"}">${initiale(n || nomP[id])}</span>`;
+  const montantHero = x => {
+    if (x == null) return "–";
+    const s = signe(x), a = Math.abs(x), e = Math.floor(a + 1e-9), c = Math.round((a - e) * 100);
+    return `${s}${f0.format(e)}<span class="cts">,${String(c).padStart(2, "0")} €</span>`;
+  };
+  const jourCourant = () => (D.jours || []).find(j => j.date === D.jour_courant) || null;
+  const auj = () => D.jour_courant;
+  const avecParts = d => d >= D.debut_parts;
+  const parId = id => (D.problemes || []).filter(p => !p.resolu && (p.compte === id));
+  const macPanne = mac => (D.problemes || []).find(p => !p.resolu && p.id === "mac_injoignable:" + mac);
+
+  function agreger(jours) {
+    const t = { gain: 0, tournois: 0, victoires: 0, heures: 0, buyins: 0, cev_total: 0, cev_connus: 0 }, pc = {}, pp = {};
+    let gainVu = false;
+    for (const j of jours) {
+      for (const [id, l] of Object.entries(j.comptes || {})) {
+        const a = pc[id] || (pc[id] = { gain: 0, tournois: 0, victoires: 0, heures: 0, buyins: 0, cev_total: 0, cev_connus: 0, gainVu: false });
+        if (l.gain != null) { a.gain += l.gain; t.gain += l.gain; gainVu = true; a.gainVu = true; }
+        for (const k of ["tournois", "victoires", "heures", "buyins", "cev_total", "cev_connus"]) { a[k] += l[k] || 0; t[k] += l[k] || 0; }
+      }
+      for (const [p, x] of Object.entries(j.parts || {})) pp[p] = (pp[p] || 0) + x;
+    }
+    if (!gainVu) t.gain = null;
+    return { total: t, comptes: pc, parts: pp };
+  }
+
+  // ---------------------------------------------------------------- dessin
+  function dessiner() {
+    preparer();
+    dessinerHero(); dessinerRobots(); dessinerPeriode(); dessinerG1(); dessinerG2(); dessinerJours(); dessinerCtv(); dessinerSoldes();
+    dessinerProblemes(); dessinerRegles(); dessinerPied();
+    etatUI.anime = false;
+  }
+
+  function dessinerHero() {
+    const j = jourCourant();
+    const t = j ? j.total : {};
+    const g = t.gain;
+    const enJeu = Object.values(D.direct || {}).filter(d => d.etat === "EN_SESSION").length;
+    const fv = t.tournois ? (t.victoires || 0) / t.tournois : null;
+    const eh = t.heures ? (g || 0) / t.heures : null;
+    let poches = "";
+    const parts = j && j.avec_parts ? j.parts || {} : null;
+    for (const p of personnes) {
+      if (!parts) {
+        poches += `<div class="poche vide"><div class="qui">${pastille(p.id)}${esc(p.nom)}</div><div class="combien">dès le ${ddm(D.debut_parts)}</div><div class="pct">${esc(p.role || "")}</div></div>`;
+      } else {
+        const x = parts[p.id] || 0;
+        const srcs = Object.entries(j.comptes || {}).filter(([id, l]) => (l.parts || {})[p.id] != null && (l.parts || {})[p.id] !== 0).length;
+        poches += `<div class="poche"><div class="qui">${pastille(p.id)}${esc(p.nom)}</div><div class="combien num ${cls(x)}">${eur(x)}</div><div class="pct">${srcs ? srcs + " compte" + (srcs > 1 ? "s" : "") : "rien aujourd'hui"}</div></div>`;
+      }
+    }
+    $("hero").innerHTML = `
+      <div class="hero-haut"><div class="hero-jour">Aujourd'hui · ${j ? dcourt(j.date) : ""}</div>
+        <div class="direct"><span class="pouls ${enJeu ? "" : "eteint"}"></span>${enJeu ? enJeu + " robot" + (enJeu > 1 ? "s" : "") + " en jeu" : "aucun robot en jeu"} · ${hm(D.fait)}</div></div>
+      <div class="hero-montant ${cls(g)}" id="hero-montant">${montantHero(g)}</div>
+      <div class="hero-sous"><span><b>${f0.format(t.tournois || 0)}</b> tournois</span><span><b>${pct(fv)}</b> gagnés</span><span><b>${heures(t.heures)}</b> de jeu</span>${eh != null ? `<span><b>${eur(eh)}</b> par heure</span>` : ""}</div>
+      <div class="poches-titre">Dans la poche de chacun aujourd'hui</div>
+      <div class="poches">${poches}</div>`;
+    if (etatUI.anime && g) compter($("hero-montant"), g);
+  }
+  function compter(el, cible) {
+    const t0 = performance.now(), dur = 900;
+    const pas = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.innerHTML = montantHero(cible * e); if (k < 1) requestAnimationFrame(pas); };
+    requestAnimationFrame(pas);
+  }
+
+  function sparkline(pts, couleur) {
+    if (!pts || pts.length < 2) return "";
+    const v = pts.map(p => +p[1] || 0), n = v.length, mn = Math.min(0, ...v), mx = Math.max(0, ...v), h = 44, w = 300;
+    const y = x => mx === mn ? h / 2 : 4 + (h - 8) * (1 - (x - mn) / (mx - mn));
+    const d = v.map((x, i) => (i ? "L" : "M") + (i * w / (n - 1)).toFixed(1) + " " + y(x).toFixed(1)).join(" ");
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="var(--axe)" stroke-width="1" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/><path d="${d}" fill="none" stroke="${couleur}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+
+  function dessinerRobots() {
+    const j = jourCourant();
+    let html = "", vus = 0;
+    for (const c of comptes) {
+      const d = (D.direct || {})[c.id];
+      const l = j && (j.comptes || {})[c.id];
+      if (!d && !(l && l.tournois)) continue;
+      if (c.fin && c.fin < auj()) continue;
+      vus++;
+      const mac = (D.mac_de || {})[c.id];
+      let [k, txt] = d ? (ETATS[d.etat] || ["arret", d.etat || "?"]) : ["arret", "Pas de carte"];
+      if (mac && macPanne(mac)) { k = "panne"; txt = "Injoignable"; }
+      const sj = (d && d.jour) || {};
+      const gain = l && l.gain != null ? l.gain : sj.net_eur;
+      const tn = (l && l.tournois) || sj.tournois || 0;
+      const vic = (l && l.victoires) || sj.victoires || 0;
+      const cev = l && l.cev_connus ? l.cev_total / l.cev_connus : sj.cev_moyen;
+      const pbs = parId(c.id).filter(p => p.niveau !== "info");
+      const tables = d && d.etat === "EN_SESSION" && d.tables ? ` · ${d.tables} tables` : "";
+      html += `<div class="robot" style="--c:${couleurCompte(c)}">
+        <div class="haut"><div><div class="nom">${esc(qui(c))}</div><div class="ou">${esc(c.appareil || "")} · ${esc(c.site || "")}</div></div><span class="etat ${k}"><i></i>${esc(txt)}${esc(tables)}</span></div>
+        <div class="gain num ${cls(gain)}">${eur(gain)}</div>
+        <div class="chiffres"><span>${f0.format(tn)} tournois</span><span>${tn ? pct(vic / tn) : "–"} gagnés</span>${cev != null ? `<span>cEV ${f0.format(cev)}</span>` : ""}</div>
+        ${sparkline(d && d.courbe, couleurCompte(c))}
+        <div class="bas"><span>${d && d.bankroll != null ? "bankroll " + f0.format(d.bankroll) + " €" : ""}${d && d.mise ? " · mise " + d.mise + " €" : ""}</span><span>${pbs.length ? `<span style="color:var(--alerte);font-weight:700">⚠ ${pbs.length} problème${pbs.length > 1 ? "s" : ""}</span>` : (d ? "vu à " + hm(d.maj) : "")}</span></div>
+      </div>`;
+    }
+    $("robots").innerHTML = html || `<div class="tres-doux">Aucun robot aujourd'hui.</div>`;
+    const enJeu = Object.values(D.direct || {}).filter(d => d.etat === "EN_SESSION").length;
+    $("robots-note").textContent = vus ? `${enJeu} en jeu sur ${vus}` : "";
+  }
+
+  // ---------------------------------------------------------------- périodes
+  function periodes(type) {
+    if (type === "tout") {
+      const js = D.jours || [];
+      if (!js.length) return [];
+      const a = agreger(js);
+      return [{ cle: "tout", type: "tout", libelle: "depuis le début", debut: js[0].date, fin: js[js.length - 1].date, en_cours: true, total: a.total, comptes: a.comptes, parts: a.parts, jours_joues: js.filter(j => (j.total || {}).tournois).length, jours_comptes: js.length }];
+    }
+    return (D.periodes || {})[type] || [];
+  }
+  function dessinerSeg() {
+    $("seg").innerHTML = TYPES.map(([k, n]) => `<button data-t="${k}" class="${k === etatUI.type ? "ici" : ""}">${n}</button>`).join("");
+    $("seg").querySelectorAll("button").forEach(b => b.onclick = () => { etatUI.type = b.dataset.t; etatUI.idx = 0; dessinerPeriode(); dessinerG1(); });
+  }
+  function dessinerPeriode() {
+    dessinerSeg();
+    const L = periodes(etatUI.type);
+    if (etatUI.idx >= L.length) etatUI.idx = Math.max(0, L.length - 1);
+    const p = L[etatUI.idx];
+    $("avant").disabled = etatUI.idx >= L.length - 1; $("apres").disabled = etatUI.idx <= 0;
+    $("avant").onclick = () => { etatUI.idx++; dessinerPeriode(); dessinerG1(); };
+    $("apres").onclick = () => { etatUI.idx--; dessinerPeriode(); dessinerG1(); };
+    if (!p) { $("p-lib").textContent = "Pas encore de données"; ["p-total", "p-sous", "p-poches", "p-comptes", "p-bilan"].forEach(i => $(i).innerHTML = ""); return; }
+    const t = p.total || {};
+    const titre = p.type === "jour" ? (p.cle === auj() ? "Aujourd'hui" : dcourt(p.cle)) : (p.type === "tout" ? "Depuis le début" : p.libelle.charAt(0).toUpperCase() + p.libelle.slice(1));
+    const sous = p.type === "jour" ? (p.en_cours ? "en cours" : "") : `${ddm(p.debut)} → ${ddm(p.fin)}${p.en_cours && p.type !== "tout" ? " · en cours" : ""}`;
+    $("p-lib").innerHTML = `${esc(titre)}<small>${esc(sous)}</small>`;
+    $("p-total").innerHTML = `<span class="num ${cls(t.gain)}">${eur(t.gain)}</span>`;
+    const fv = t.tournois ? t.victoires / t.tournois : null, eh = t.heures ? (t.gain || 0) / t.heures : null;
+    const roi = t.buyins ? (t.gain || 0) / t.buyins : null, cev = t.cev_connus ? t.cev_total / t.cev_connus : null;
+    let ec = "";
+    if (p.ecart != null && p.avant) ec = `<span class="ecart ${cls(p.ecart)}">${eur(p.ecart)} vs avant</span>`;
+    $("p-sous").innerHTML = `<span><b>${f0.format(t.tournois || 0)}</b> tournois</span><span>${pct(fv)} gagnés</span><span>${heures(t.heures)}</span>${eh != null ? `<span>${eur(eh)}/h</span>` : ""}${roi != null ? `<span>ROI ${signe(roi)}${f1.format(Math.abs(roi * 100))} %</span>` : ""}${cev != null ? `<span>cEV ${f0.format(cev)}</span>` : ""}${ec}`;
+    // poches
+    const parts = p.parts || {};
+    const aParts = Object.keys(parts).length > 0;
+    const mx = Math.max(1e-9, ...personnes.map(x => Math.abs(parts[x.id] || 0)));
+    $("p-poches-note").textContent = aParts ? "parts de la période" : `parts dès le ${ddm(D.debut_parts)}`;
+    $("p-poches").innerHTML = personnes.map(x => {
+      const v = parts[x.id] || 0, w = Math.abs(v) / mx * 100;
+      return `<div class="ligne"><div class="qui">${pastille(x.id)}${esc(x.nom)}</div><div class="piste"><div class="remp" style="left:0;width:${aParts ? w : 0}%;background:${couleurs[x.id]};opacity:${v < 0 ? .45 : 1}"></div></div><div class="val ${aParts ? cls(v) : "nul"}">${aParts ? eur(v) : "–"}</div></div>`;
+    }).join("");
+    // comptes
+    const lignes = comptes.filter(c => (p.comptes || {})[c.id] && ((p.comptes[c.id].tournois || 0) > 0 || p.comptes[c.id].gain)).map(c => {
+      const a = p.comptes[c.id], tv = a.tournois ? a.victoires / a.tournois : null, ce = a.cev_connus ? a.cev_total / a.cev_connus : null;
+      return `<tr><td><span class="compte-nom"><span class="point" style="background:${couleurCompte(c)}"></span>${esc(c.nom)}</span></td><td class="n ${cls(a.gain)}"><b>${eur(a.gain)}</b></td><td class="n">${f0.format(a.tournois || 0)}</td><td class="n">${pct(tv)}</td><td class="n">${ce != null ? f0.format(ce) : "–"}</td><td class="n">${heures(a.heures)}</td></tr>`;
+    }).join("");
+    $("p-comptes").innerHTML = lignes ? `<tr><th>Compte</th><th class="n">Gain</th><th class="n">Tournois</th><th class="n">Gagnés</th><th class="n">cEV</th><th class="n">Temps</th></tr>${lignes}` : `<tr><td class="tres-doux">Rien joué sur cette période.</td></tr>`;
+    $("p-bilan").innerHTML = bilanTexte(p);
+  }
+  function bilanTexte(p) {
+    const t = p.total || {};
+    if (!t.tournois) return "<p>Rien joué sur cette période.</p>";
+    const L = [];
+    const perio = p.type === "jour" ? (p.cle === auj() ? "Aujourd'hui" : dcourt(p.cle)) : (p.type === "tout" ? "Depuis le début" : "Sur la période");
+    L.push(`<p><b>${perio} : ${eur(t.gain)}</b> en ${f0.format(t.tournois)} tournois${t.heures ? " et " + heures(t.heures) + " de jeu" : ""}.</p>`);
+    const cs = Object.entries(p.comptes || {}).filter(([id, a]) => a.tournois > 0 && a.gain != null).sort((a, b) => b[1].gain - a[1].gain);
+    if (cs.length > 1) {
+      const [bi, ba] = cs[0], [wi, wa] = cs[cs.length - 1];
+      L.push(`<p>Meilleur compte : <b>${esc((cpt[bi] || {}).nom || bi)}</b> (${eur(ba.gain)}). ${wa.gain < 0 ? `Le plus bas : <b>${esc((cpt[wi] || {}).nom || wi)}</b> (${eur(wa.gain)}).` : ""}</p>`);
+    }
+    if (p.meilleur && p.type !== "jour") L.push(`<p>Meilleur jour : <b>${dcourt(p.meilleur.date)}</b> (${eur(p.meilleur.gain)})${p.pire && p.pire.date !== p.meilleur.date ? `, pire jour : ${dcourt(p.pire.date)} (${eur(p.pire.gain)})` : ""}.</p>`);
+    if (p.ecart != null && p.avant) L.push(`<p>Par rapport à la période d'avant (${eur(p.avant.gain)}) : <b class="${cls(p.ecart)}">${eur(p.ecart)}</b>.</p>`);
+    const parts = p.parts || {};
+    if (Object.keys(parts).length) L.push(`<p>Dans la poche : ${personnes.filter(x => parts[x.id] != null).map(x => `${esc(x.nom)} <b>${eur(parts[x.id])}</b>`).join(", ")}.</p>`);
+    const cev = t.cev_connus ? t.cev_total / t.cev_connus : null;
+    if (cev != null) L.push(`<p>Qualité de jeu (cEV) : <b>${f0.format(cev)}</b> jetons par tournoi ${cev >= 55 ? "(au-dessus du repère 55 : le jeu est bon, la variance fait le reste)" : "(sous le repère 55 : à regarder)"}.</p>`);
+    return L.join("");
+  }
+
+  // ---------------------------------------------------------------- graphes
+  const NS = "http://www.w3.org/2000/svg";
+  function echelle(mn, mx, n = 4) {
+    if (mn === mx) { mn -= 1; mx += 1; }
+    const brut = (mx - mn) / n, p = Math.pow(10, Math.floor(Math.log10(brut))), m = brut / p;
+    const pasG = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+    const a = Math.floor(mn / pasG) * pasG, b = Math.ceil(mx / pasG) * pasG, ticks = [];
+    for (let v = a; v <= b + pasG / 2; v += pasG) ticks.push(+v.toFixed(6));
+    return { a, b, ticks };
+  }
+  function bulle(conteneur) {
+    let b = conteneur.querySelector(".bulle");
+    if (!b) { b = document.createElement("div"); b.className = "bulle"; conteneur.appendChild(b); }
+    return b;
+  }
+  function placer(b, conteneur, x, y) {
+    const W = conteneur.clientWidth, bw = b.offsetWidth, bh = b.offsetHeight;
+    let left = x + 14; if (left + bw > W) left = x - bw - 14; if (left < 0) left = 0;
+    let top = y - bh / 2; if (top < -10) top = -10;
+    b.style.left = left + "px"; b.style.top = top + "px";
+  }
+
+  function joursDuGraphe() {
+    const L = periodes(etatUI.type), p = L[etatUI.idx];
+    const js = D.jours || [];
+    if (!p || p.type === "jour") return js.slice(-30);
+    return js.filter(j => j.date >= p.debut && j.date <= p.fin);
+  }
+  function dessinerG1() {
+    const el = $("g1"), js = joursDuGraphe();
+    $("g1-titre").textContent = "Gains par jour" + (etatUI.type === "jour" ? " · 30 derniers jours" : "");
+    if (!js.length) { el.innerHTML = `<div class="tres-doux">Pas de jours sur cette période.</div>`; return; }
+    const W = Math.max(280, el.clientWidth || 600), H = W < 500 ? 210 : 260, ml = 52, mr = 8, mt = 10, mb = 26;
+    const v = js.map(j => (j.total || {}).gain || 0);
+    const sc = echelle(Math.min(0, ...v), Math.max(0, ...v));
+    const y = x => mt + (H - mt - mb) * (1 - (x - sc.a) / (sc.b - sc.a));
+    const n = js.length, bandW = (W - ml - mr) / n, barW = Math.max(3, Math.min(34, bandW - 2));
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Gains par jour">`;
+    for (const t of sc.ticks) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? "var(--axe)" : "var(--grille)"}" stroke-width="1"/><text x="${ml - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--t3)" class="num">${t === 0 ? "0" : eurC(t)}</text>`;
+    const pasL = Math.max(1, Math.ceil(n / (W < 500 ? 5 : 9)));
+    js.forEach((j, i) => {
+      const g = v[i], x = ml + i * bandW + (bandW - barW) / 2, y0 = y(0), y1 = y(g), h = Math.max(Math.abs(y1 - y0), g ? 1.5 : 0);
+      const top = g >= 0 ? y0 - h : y0, r = Math.min(4, barW / 2, h);
+      const coul = g >= 0 ? "var(--pos)" : "var(--neg)";
+      // coin arrondi seulement du côté de la valeur (ancré sur la ligne de 0)
+      const p = g >= 0
+        ? `M${x} ${y0}V${top + r}Q${x} ${top} ${x + r} ${top}H${x + barW - r}Q${x + barW} ${top} ${x + barW} ${top + r}V${y0}Z`
+        : `M${x} ${y0}V${top + h - r}Q${x} ${top + h} ${x + r} ${top + h}H${x + barW - r}Q${x + barW} ${top + h} ${x + barW} ${top + h - r}V${y0}Z`;
+      s += `<path d="${p}" fill="${coul}" opacity="${j.en_cours ? .55 : .9}"/>`;
+      if (i % pasL === 0 || i === n - 1) s += `<text x="${ml + i * bandW + bandW / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--t3)">${ddm(j.date)}</text>`;
+      s += `<rect class="cible" data-i="${i}" x="${ml + i * bandW}" y="${mt}" width="${bandW}" height="${H - mt - mb}" fill="transparent"/>`;
+    });
+    s += `</svg>`;
+    el.innerHTML = s;
+    const b = bulle(el);
+    el.querySelectorAll(".cible").forEach(r => {
+      const montrer = ev => {
+        const j = js[+r.dataset.i];
+        let h = `<div class="t">${dcourt(j.date)}${j.en_cours ? " · en cours" : ""}</div><div class="l"><span>Total</span><b class="${cls(j.total.gain)}">${eur(j.total.gain)}</b></div>`;
+        for (const c of comptes) { const l = (j.comptes || {})[c.id]; if (l && (l.tournois || l.gain)) h += `<div class="l"><span><span class="point" style="background:${couleurCompte(c)}"></span>${esc(c.nom)}</span><b>${eur(l.gain)}</b></div>`; }
+        if (j.avec_parts && Object.keys(j.parts || {}).length) {
+          h += `<div class="t" style="margin-top:8px">Dans la poche</div>`;
+          for (const p of personnes) if (j.parts[p.id] != null) h += `<div class="l"><span><span class="point" style="background:${couleurs[p.id]}"></span>${esc(p.nom)}</span><b>${eur(j.parts[p.id])}</b></div>`;
+        }
+        b.innerHTML = h; b.classList.add("vue");
+        const rc = el.getBoundingClientRect();
+        placer(b, el, (ev.touches ? ev.touches[0].clientX : ev.clientX) - rc.left, (ev.touches ? ev.touches[0].clientY : ev.clientY) - rc.top);
+      };
+      r.addEventListener("mousemove", montrer); r.addEventListener("touchstart", montrer, { passive: true });
+      r.addEventListener("mouseleave", () => b.classList.remove("vue"));
+    });
+  }
+
+  function series2() {
+    const js = D.jours || [];
+    if (etatUI.mode === "personnes") {
+      const jp = js.filter(j => j.avec_parts);
+      return { dates: jp.map(j => j.date), series: personnes.map(p => {
+        let c = 0; return { id: p.id, nom: p.nom, couleur: couleurs[p.id], tiret: false, v: jp.map(j => (c += (j.parts || {})[p.id] || 0)) };
+      }) };
+    }
+    const dates = js.map(j => j.date);
+    const vus = {};
+    return { dates, series: comptes.map(c => {
+      let s = 0, commence = false;
+      const v = js.map(j => { const l = (j.comptes || {})[c.id]; if (l && (l.tournois || l.gain)) commence = true; if (l && l.gain != null) s += l.gain; return commence ? s : null; });
+      const coul = couleurCompte(c); vus[coul] = (vus[coul] || 0) + 1;
+      return { id: c.id, nom: c.nom, couleur: coul, tiret: vus[coul] > 1, v };
+    }).filter(s => s.v.some(x => x != null)) };
+  }
+  function dessinerG2() {
+    if (!etatUI.mode) etatUI.mode = (D.jours || []).filter(j => j.avec_parts).length >= 2 ? "personnes" : "comptes";
+    document.querySelectorAll("#g2-mode button").forEach(b => { b.className = b.dataset.m === etatUI.mode ? "ici" : ""; b.onclick = () => { etatUI.mode = b.dataset.m; dessinerG2(); }; });
+    const el = $("g2"), { dates, series } = series2();
+    $("g2-leg").innerHTML = series.map(s => `<span><i style="background:${s.couleur};${s.tiret ? "background:repeating-linear-gradient(90deg," + s.couleur + " 0 4px,transparent 4px 7px)" : ""}"></i>${esc(s.nom)}</span>`).join("");
+    if (dates.length < 2) {
+      el.innerHTML = `<div class="tres-doux" style="padding:20px 0">${etatUI.mode === "personnes" ? `La courbe de chacun se dessine à partir du ${ddm(D.debut_parts)}, dès le 2e jour.` : "Pas encore assez de jours."}</div>`;
+      return;
+    }
+    const W = Math.max(280, el.clientWidth || 600), H = W < 500 ? 230 : 290, ml = 56, mr = W < 500 ? 8 : 92, mt = 12, mb = 26;
+    const tout = series.flatMap(s => s.v.filter(x => x != null));
+    const sc = echelle(Math.min(0, ...tout), Math.max(0, ...tout));
+    const x = i => ml + (W - ml - mr) * (dates.length === 1 ? .5 : i / (dates.length - 1));
+    const y = v => mt + (H - mt - mb) * (1 - (v - sc.a) / (sc.b - sc.a));
+    let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Cumul">`;
+    for (const t of sc.ticks) s += `<line x1="${ml}" x2="${W - mr}" y1="${y(t)}" y2="${y(t)}" stroke="${t === 0 ? "var(--axe)" : "var(--grille)"}" stroke-width="1"/><text x="${ml - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--t3)" class="num">${t === 0 ? "0" : eurC(t)}</text>`;
+    const pasL = Math.max(1, Math.ceil(dates.length / (W < 500 ? 4 : 8)));
+    dates.forEach((d, i) => { if (i % pasL === 0 || i === dates.length - 1) s += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--t3)">${ddm(d)}</text>`; });
+    const fins = [];
+    for (const se of series) {
+      let d = "", on = false;
+      se.v.forEach((v, i) => { if (v == null) { on = false; return; } d += (on ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); on = true; });
+      s += `<path d="${d}" fill="none" stroke="var(--carte)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;
+      s += `<path d="${d}" fill="none" stroke="${se.couleur}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" ${se.tiret ? 'stroke-dasharray="6 4"' : ""}/>`;
+      const last = se.v.length - 1 - [...se.v].reverse().findIndex(v => v != null);
+      if (last >= 0 && last < se.v.length) fins.push({ se, i: last, v: se.v[last] });
+    }
+    if (W >= 500) {                                                   // étiquettes directes en bout de courbe, sans chevauchement
+      fins.sort((a, b) => y(a.v) - y(b.v));
+      let dern = -1e9;
+      for (const f of fins) { let yy = Math.max(y(f.v), dern + 15); dern = yy; s += `<circle cx="${x(f.i)}" cy="${y(f.v)}" r="4" fill="${f.se.couleur}" stroke="var(--carte)" stroke-width="2"/><text x="${x(f.i) + 9}" y="${yy + 4}" font-size="12" font-weight="650" fill="var(--t2)">${esc(f.se.nom.split(" · ")[0])} ${eurC(f.v)}</text>`; }
+    }
+    s += `<line id="g2-croix" x1="0" x2="0" y1="${mt}" y2="${H - mb}" stroke="var(--axe)" stroke-width="1" opacity="0"/><rect id="g2-zone" x="${ml}" y="${mt}" width="${W - ml - mr}" height="${H - mt - mb}" fill="transparent"/></svg>`;
+    el.innerHTML = s;
+    const b = bulle(el), zone = el.querySelector("#g2-zone"), croix = el.querySelector("#g2-croix");
+    const montrer = ev => {
+      const rc = el.getBoundingClientRect(), cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rc.left, cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - rc.top;
+      const k = W / rc.width, i = Math.max(0, Math.min(dates.length - 1, Math.round((cx * k - ml) / ((W - ml - mr) / Math.max(1, dates.length - 1)))));
+      croix.setAttribute("x1", x(i)); croix.setAttribute("x2", x(i)); croix.setAttribute("opacity", 1);
+      let h = `<div class="t">${dcourt(dates[i])}</div>`;
+      [...series].filter(se => se.v[i] != null).sort((a, c) => c.v[i] - a.v[i]).forEach(se => { h += `<div class="l"><span><span class="point" style="background:${se.couleur}"></span>${esc(se.nom)}</span><b>${eur(se.v[i])}</b></div>`; });
+      b.innerHTML = h; b.classList.add("vue"); placer(b, el, x(i) / k, cy);
+    };
+    zone.addEventListener("mousemove", montrer); zone.addEventListener("touchstart", montrer, { passive: true }); zone.addEventListener("touchmove", montrer, { passive: true });
+    zone.addEventListener("mouseleave", () => { b.classList.remove("vue"); croix.setAttribute("opacity", 0); });
+  }
+
+  // ---------------------------------------------------------------- jour par jour
+  function dessinerJours() {
+    const js = [...(D.jours || [])].reverse().slice(0, etatUI.nJours);
+    const lignes = js.map(j => {
+      const t = j.total || {}, ouvert = etatUI.ouverts[j.date];
+      const actifs = comptes.filter(c => (j.comptes || {})[c.id] && ((j.comptes[c.id].tournois || 0) > 0));
+      const mini = actifs.map(c => `<span class="point" title="${esc(c.nom)}" style="background:${couleurCompte(c)};width:7px;height:7px"></span>`).join("");
+      const joue = t.tournois || t.gain;
+      const poches = j.avec_parts && Object.keys(j.parts || {}).length
+        ? personnes.filter(p => j.parts[p.id]).map(p => `<span title="${esc(p.nom)}"><span class="point" style="background:${couleurs[p.id]};width:7px;height:7px"></span><span class="doux">${esc(p.nom)}</span><b class="${cls(j.parts[p.id])}">${eur(j.parts[p.id])}</b></span>`).join("")
+        : (joue ? `<span class="tres-doux">${j.avec_parts ? "" : "avant les parts"}</span>` : "");
+      return `<div class="jl" data-d="${j.date}"><div class="jl-haut"><div><b>${dcourt(j.date)}</b>${j.en_cours ? ` <span class="badge">en cours</span>` : ""} <span style="display:inline-flex;gap:3px;margin-left:4px">${mini}</span></div>
+        <div class="g ${joue ? cls(t.gain) : "nul"}">${joue ? eur(t.gain) : "repos"}</div><div class="t">${t.tournois ? f0.format(t.tournois) + " tournois" : ""}</div><div class="fl">${joue ? (ouvert ? "▴" : "▾") : ""}</div></div>
+        ${poches ? `<div class="jl-poches">${poches}</div>` : ""}${ouvert ? `<div class="jl-detail">${detailJour(j)}</div>` : ""}</div>`;
+    }).join("");
+    $("jours").innerHTML = lignes;
+    $("jours").querySelectorAll(".jl-haut, .jl-poches").forEach(el => el.onclick = () => { const d = el.parentNode.dataset.d; etatUI.ouverts[d] = !etatUI.ouverts[d]; dessinerJours(); });
+    $("plus-jours").hidden = (D.jours || []).length <= etatUI.nJours;
+    $("plus-jours").onclick = () => { etatUI.nJours += 14; dessinerJours(); };
+  }
+  function detailJour(j) {
+    let h = `<div class="formule">`;
+    for (const c of comptes) {
+      const l = (j.comptes || {})[c.id];
+      if (!l || !(l.tournois || l.gain)) continue;
+      h += `<h4><span class="point" style="background:${couleurCompte(c)}"></span> ${esc(c.nom)} : <span class="${cls(l.gain)}">${eur(l.gain)}</span> <span class="tres-doux" style="font-weight:500">· ${f0.format(l.tournois || 0)} tournois · ${heures(l.heures)}${l.cev_connus ? " · cEV " + f0.format(l.cev_total / l.cev_connus) : ""}</span></h4>`;
+      const pc = l.parts || {};
+      if (!Object.keys(pc).length) { h += `<div class="f tres-doux" style="grid-column:1/-1">${j.avec_parts ? "pas de règle de partage" : "avant le " + ddm(D.debut_parts) + " : pas de parts"}</div>`; continue; }
+      for (const [p, x] of Object.entries(pc)) {
+        const pcent = l.gain ? x / l.gain * 100 : ((c.pourcentages || {})[p] || 0);
+        h += `<div class="f">${pastille(p)} ${esc(nomP[p] || p)}</div><div class="f">${eur(l.gain)} × ${f0.format(pcent)} % = <b class="${cls(x)}">${eur(x)}</b></div>`;
+      }
+    }
+    if (j.avec_parts && Object.keys(j.parts || {}).length) {
+      h += `<h4>Total du jour par personne</h4>`;
+      for (const p of personnes) if (j.parts[p.id] != null) h += `<div class="f">${pastille(p.id)} ${esc(p.nom)}</div><div class="f"><b class="${cls(j.parts[p.id])}">${eur(j.parts[p.id])}</b></div>`;
+    }
+    return h + `</div>`;
+  }
+
+  // ---------------------------------------------------------------- CTV, soldes, problèmes, règles
+  function dessinerCtv() {
+    const c = D.ctv || {};
+    if (!c.depart) { $("ctv").innerHTML = ""; return; }
+    const k = Math.max(0, Math.min(1, c.rembourse_pct || 0)), R = 50, L = 2 * Math.PI * R;
+    $("ctv").innerHTML = `<div class="titre"><h2>Remboursement CTV</h2><span class="note">dette au ${ddm(c.dette_au)} : ${eurC(c.depart).replace("+", "")}</span></div>
+      <div class="anneau"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--grille)" stroke-width="12"/>
+        ${k > 0.002 ? `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${couleurs.ctv || "var(--p6)"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(L * k).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 60 60)"/>` : ""}
+        <text x="60" y="66" text-anchor="middle" font-size="20" font-weight="800" fill="var(--t1)">${f0.format(k * 100)} %</text></svg>
+      <div><div class="tres-doux" style="font-size:13px">Il reste</div><div class="gros num">${f2.format(c.reste)} €</div>
+        <div class="doux" style="font-size:13.5px;margin-top:4px">${eur(c.gagne)} gagnés pour CTV depuis le ${ddm(D.debut_parts)}${c.verse ? `, dont ${eur(c.verse)} déjà versés` : ""}.</div>
+        <div class="doux" style="font-size:13.5px;margin-top:4px">${c.rythme_jour ? `Rythme : ${eur(c.rythme_jour)} par jour (7 derniers jours) → <b>fini vers le ${ddm(c.fin_estimee || "")}</b>.` : "Le rythme s'affiche après quelques jours."}</div></div></div>
+      <div class="tres-doux" style="font-size:12.5px;margin-top:12px">${esc(c.apres || "")}</div>`;
+  }
+  function dessinerSoldes() {
+    const L = D.soldes || [];
+    $("soldes").innerHTML = `<div class="titre"><h2>Ce qu'on doit à chacun</h2><span class="note">depuis le ${ddm(D.debut_parts)}</span></div>
+      <table><tr><th>Qui</th><th class="n">Gagné</th><th class="n">Versé</th><th class="n">Reste</th></tr>${L.map(s => `<tr><td><span class="compte-nom">${pastille(s.id, s.nom)}${esc(s.nom)}</span></td><td class="n ${cls(s.gagne)}">${eur(s.gagne)}</td><td class="n doux">${f2.format(s.verse || 0)} €</td><td class="n"><b class="${cls(s.reste)}">${eur(s.reste)}</b></td></tr>`).join("")}</table>
+      <div class="tres-doux" style="font-size:12.5px;margin-top:10px">« Versé » : l'argent déjà remis à la personne. Dis-le à Claude (« j'ai versé 20 € à Mam ») : il le note, la page et la feuille suivent. L'argent d'avant le 12/11 reste dans « Carnet - finances ».</div>`;
+  }
+  function depuis(ts) {
+    const s = Math.max(0, Date.now() / 1000 - ts);
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min";
+    if (s < 86400) return Math.floor(s / 3600) + " h " + String(Math.floor(s % 3600 / 60)).padStart(2, "0");
+    return Math.floor(s / 86400) + " j";
+  }
+  function dessinerProblemes() {
+    const L = D.problemes || [], ouverts = L.filter(p => !p.resolu), regles = L.filter(p => p.resolu);
+    const ic = { critique: "!", alerte: "!", info: "i" };
+    let h = `<div class="titre"><h2>Problèmes</h2><span class="note">trouvés tout seuls · toutes les 2 min</span></div>`;
+    if (!ouverts.length) h += `<div class="aucun">✓ Rien à signaler.</div>`;
+    for (const p of ouverts) h += `<div class="pb ${esc(p.niveau)}"><div class="ic">${ic[p.niveau] || "i"}</div><div class="tt">${esc(p.titre)}<span class="qd">depuis ${depuis(p.premier)}</span></div>${p.detail ? `<div class="dd">${esc(p.detail)}</div>` : ""}${p.action ? `<div class="aa">→ ${esc(p.action)}</div>` : ""}</div>`;
+    if (regles.length) {
+      h += `<div class="titre" style="margin-top:16px"><h2>Réglés</h2></div>`;
+      for (const p of regles.slice(0, 8)) h += `<div class="pb regle"><div class="ic">✓</div><div class="tt">${esc(p.titre)}<span class="qd" style="text-decoration:none">réglé il y a ${depuis(p.resolu)}</span></div></div>`;
+    }
+    $("problemes").innerHTML = h;
+  }
+  function dessinerRegles() {
+    let h = `<div class="titre"><h2>Règles de partage</h2><span class="note">depuis le ${ddm(D.debut_parts)} · un jour en perte, chacun perd sa part</span></div>`;
+    for (const r of D.regles || []) {
+      const membres = comptes.filter(c => c.regle === r.id && !(c.fin && c.fin < auj()));
+      const tit = [...new Set(membres.map(c => c.titulaire_nom).filter(Boolean))];
+      const bloc = Object.entries(r.parts).map(([p, x]) => {
+        const nom = p === "titulaire" ? "Titulaire" : (nomP[p] || p), coul = p === "titulaire" ? "linear-gradient(90deg,var(--p3),var(--p4),var(--p5))" : couleurs[p];
+        return `<div style="flex:${x};background:${coul}" title="${esc(nom)} ${x} %">${x >= 14 ? esc(nom) + " " : ""}${x} %</div>`;
+      }).join("");
+      const leg = Object.entries(r.parts).map(([p, x]) => p === "titulaire"
+        ? `<span><span class="point" style="background:linear-gradient(90deg,var(--p3),var(--p4),var(--p5))"></span>Titulaire du compte <b>${x} %</b></span>`
+        : `<span><span class="point" style="background:${couleurs[p]}"></span>${esc(nomP[p] || p)} <b>${x} %</b></span>`).join("");
+      h += `<div class="regle"><div class="nom">${esc(r.nom)}</div><div class="empile">${bloc}</div><div class="legende-r">${leg}</div><div class="qui-sont">Comptes : ${membres.map(c => esc(c.nom)).join(", ") || "aucun"}</div>${r.pourquoi ? `<div class="qui-sont">${esc(r.pourquoi)}</div>` : ""}</div>`;
+    }
+    $("regles").innerHTML = h;
+  }
+  function dessinerPied() {
+    const f = D.feuille || {};
+    $("pied").innerHTML = `${f.url ? `<a class="bouton-feuille" href="${esc(f.url)}" target="_blank" rel="noopener">▦ Ouvrir le Google Sheet (tous les calculs)</a><br>` : ""}
+      Chiffres de jeu lus à ${hm(D.maj_donnees)} · page faite à ${hm(D.fait)} · se met à jour toute seule chaque minute<br>
+      ${D.controle && D.controle.ok ? "✓ Contrôle : chaque jour, la somme des parts = la somme des gains" : `<b style="color:var(--crit)">Contrôle des parts en échec</b>`}`;
+  }
+
+  let minuterie = null;
+  window.addEventListener("resize", () => { clearTimeout(minuterie); minuterie = setTimeout(() => { if (D) { dessinerG1(); dessinerG2(); } }, 150); });
+  cle = cleDuLien();
+  window.addEventListener("hashchange", () => { cle = cleDuLien(); D = null; boucle(); });
+  boucle();
+})();
+</script>
+</body>
+</html>
