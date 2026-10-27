@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Suivi des résultats</title>
+<!-- 30/10 : page autonome du suivi. NE PAS ÉDITER suivi.html : il est refait par construire.py à partir de ce modèle
+     + suivi_bloc.css + suivi_bloc.js (le même bloc que l'onglet du simulateur). -->
+<style>
+:root { color-scheme: light; --page-fond: #f6f5f2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --page-fond: #121211; } }
+:root[data-theme="dark"] { color-scheme: dark; --page-fond: #121211; }
+body { margin: 0; background: var(--page-fond); }
+.page { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+.page h1 { font: 700 1.35rem/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0 0 4px; }
+.theme { float: right; font: .8rem -apple-system, sans-serif; border: 1px solid #8884; background: transparent; color: inherit; border-radius: 8px; padding: 4px 8px; cursor: pointer; }
+/* 30/10 : bloc « Suivi des résultats » (chantier_3010/suivi). Tout est préfixé suivi- et rangé sous .suivi-racine :
+   rien ne fuit dans la page qui l'accueille. Couleurs : jetons --suivi-* (clair, sombre par le système ou data-theme). */
+.suivi-racine {
+  color-scheme: light;
+  --suivi-fond: #f6f5f2; --suivi-carte: #fcfcfb; --suivi-trait: #e4e2dc; --suivi-texte: #0b0b0b; --suivi-texte-2: #52514e;
+  --suivi-texte-3: #6e6d68; --suivi-gain: #0f7b3a; --suivi-perte: #c8302f; --suivi-teinte: #eeece6; --suivi-rouge: #d4342f;
+  --suivi-s1: #2a78d6; --suivi-s2: #eb6834; --suivi-s3: #1baf7a; --suivi-neutre: #b9b7b0;
+  color: var(--suivi-texte); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .suivi-racine {
+    color-scheme: dark;
+    --suivi-fond: #121211; --suivi-carte: #1a1a19; --suivi-trait: #2e2e2c; --suivi-texte: #f0efec; --suivi-texte-2: #c3c2b7;
+    --suivi-texte-3: #8f8e86; --suivi-gain: #3fbf6f; --suivi-perte: #ef6b6a; --suivi-teinte: #242422; --suivi-rouge: #ff7a75;
+    --suivi-s1: #3987e5; --suivi-s2: #d95926; --suivi-s3: #199e70; --suivi-neutre: #55544f;
+  }
+}
+:root[data-theme="dark"] .suivi-racine {
+  color-scheme: dark;
+  --suivi-fond: #121211; --suivi-carte: #1a1a19; --suivi-trait: #2e2e2c; --suivi-texte: #f0efec; --suivi-texte-2: #c3c2b7;
+  --suivi-texte-3: #8f8e86; --suivi-gain: #3fbf6f; --suivi-perte: #ef6b6a; --suivi-teinte: #242422; --suivi-rouge: #ff7a75;
+  --suivi-s1: #3987e5; --suivi-s2: #d95926; --suivi-s3: #199e70; --suivi-neutre: #55544f;
+}
+.suivi-racine *, .suivi-racine *::before, .suivi-racine *::after { box-sizing: border-box; }
+.suivi-racine h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.suivi-racine p { margin: 0; }
+.suivi-sous { color: var(--suivi-texte-3); font-size: .8rem; }
+.suivi-carte { background: var(--suivi-carte); border: 1px solid var(--suivi-trait); border-radius: 16px; padding: 14px 16px; margin-top: 12px; min-width: 0; }
+.suivi-choix { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.suivi-choix button { font: inherit; font-size: .88rem; padding: 7px 11px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); cursor: pointer; }
+.suivi-choix button[aria-pressed="true"] { background: var(--suivi-texte); color: var(--suivi-carte); border-color: var(--suivi-texte); font-weight: 700; }
+.suivi-jour { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.suivi-jour button { font: inherit; width: 40px; height: 36px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); cursor: pointer; }
+.suivi-jour select { font: inherit; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); flex: 1; min-width: 0; }
+.suivi-diag { font-size: 1.08rem; font-weight: 700; }
+.suivi-diag small { display: block; font-weight: 400; color: var(--suivi-texte-2); font-size: .85rem; margin-top: 4px; }
+.suivi-tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .suivi-tuiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.suivi-tuile small { display: block; font-size: .72rem; color: var(--suivi-texte-3); text-transform: uppercase; letter-spacing: .04em; }
+.suivi-tuile b { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.suivi-tuile span { display: block; font-size: .75rem; color: var(--suivi-texte-3); }
+.suivi-large { grid-column: 1 / -1; }
+.suivi-gain { color: var(--suivi-gain); } .suivi-perte { color: var(--suivi-perte); }
+.suivi-ligne { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--suivi-trait); font-variant-numeric: tabular-nums; }
+.suivi-ligne.suivi-premiere { border-top: 0; }
+.suivi-ligne .suivi-nom { color: var(--suivi-texte-2); }
+.suivi-ligne.suivi-total { font-weight: 700; }
+.suivi-chance { padding: 10px 0; border-top: 1px solid var(--suivi-trait); }
+.suivi-chance.suivi-premiere { border-top: 0; }
+.suivi-tete { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.suivi-z { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.suivi-chance p { font-size: .85rem; color: var(--suivi-texte-2); }
+.suivi-jauge { position: relative; height: 10px; border-radius: 5px; margin: 8px 0 4px;
+  background: linear-gradient(90deg, var(--suivi-perte) 0%, var(--suivi-neutre) 33%, var(--suivi-neutre) 67%, var(--suivi-gain) 100%); }
+.suivi-jauge i { position: absolute; top: -4px; width: 4px; height: 18px; border-radius: 2px; background: var(--suivi-texte); box-shadow: 0 0 0 2px var(--suivi-carte); transform: translateX(-2px); }
+.suivi-reperes { display: flex; justify-content: space-between; font-size: .68rem; color: var(--suivi-texte-3); }
+.suivi-legende { display: flex; gap: 2px 14px; flex-wrap: wrap; font-size: .8rem; color: var(--suivi-texte-2); margin-bottom: 6px; }
+.suivi-legende i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.suivi-legende > span { white-space: nowrap; }
+.suivi-legende b { font-weight: 650; font-variant-numeric: tabular-nums; }
+.suivi-graphe { position: relative; }
+.suivi-graphe svg { width: 100%; height: auto; display: block; touch-action: pan-y; overflow: visible; }
+.suivi-graphe svg:focus { outline: none; }
+.suivi-graphe svg:focus-visible { outline: 2px solid var(--suivi-s1); outline-offset: 2px; border-radius: 6px; }
+.suivi-graphe text { font: 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: var(--suivi-texte-3); font-variant-numeric: tabular-nums; }
+.suivi-graphe text.suivi-t0 { fill: var(--suivi-texte-2); font-weight: 600; }
+.suivi-graphe text.suivi-fin { font-size: 12.5px; font-weight: 650; fill: var(--suivi-texte); }
+.suivi-bulle { position: absolute; pointer-events: none; z-index: 2; background: var(--suivi-carte); border: 1px solid var(--suivi-trait); border-radius: 10px; padding: 8px 10px; min-width: 150px;
+  font-size: .8125rem; box-shadow: 0 4px 14px rgba(0,0,0,.18); display: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.suivi-bd { color: var(--suivi-texte-2); margin-bottom: 4px; }
+.suivi-br { display: flex; align-items: center; gap: 6px; }
+.suivi-br b { margin-left: auto; padding-left: 12px; font-weight: 650; }
+.suivi-br i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; flex: none; }
+.suivi-racine table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.suivi-racine th, .suivi-racine td { text-align: right; padding: 6px 4px; border-top: 1px solid var(--suivi-trait); }
+.suivi-racine th:first-child, .suivi-racine td:first-child { text-align: left; }
+.suivi-racine th { font-size: .72rem; color: var(--suivi-texte-3); font-weight: 600; text-transform: uppercase; border-top: 0; }
+.suivi-defile { overflow-x: auto; }
+.suivi-setup { padding: 8px 0; border-top: 1px solid var(--suivi-trait); font-size: .88rem; }
+.suivi-setup.suivi-premiere { border-top: 0; }
+.suivi-haut { display: flex; justify-content: space-between; gap: 8px; }
+.suivi-bas { color: var(--suivi-texte-2); font-size: .8rem; }
+.suivi-c { font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+.suivi-rouge { color: var(--suivi-rouge); }
+.suivi-item { padding: 8px 0; border-top: 1px solid var(--suivi-trait); font-size: .88rem; }
+.suivi-item.suivi-premiere { border-top: 0; }
+.suivi-item b { font-variant-numeric: tabular-nums; }
+.suivi-lex p { font-size: .85rem; color: var(--suivi-texte-2); padding: 3px 0; }
+.suivi-lex b { color: var(--suivi-texte); }
+.suivi-msg { padding: 14px; border-radius: 12px; background: var(--suivi-teinte); margin-top: 12px; }
+.suivi-attente { color: var(--suivi-texte-3); font-style: italic; }
+.suivi-ligne b, .suivi-z, .suivi-tuile b { white-space: nowrap; }   /* 30/10 : le « € » ne part jamais seul à la ligne */
+
+</style>
+</head>
+<body>
+<div class="page suivi-racine">
+  <button class="theme" id="theme" type="button">Clair / sombre</button>
+  <h1>Suivi des résultats</h1>
+  <div id="suivi"><div class="suivi-msg">Chargement…</div></div>
+</div>
+<script type="application/json" id="donnees-suivi">{}</script>
+<script>
+/* 30/10 : bloc « Suivi des résultats » (chantier_3010/suivi), branchable n'importe où.
+   Usage : SuiviResultats.dessiner(conteneur, donnees)   (donnees = publie/suivi.json, produit par construire.py)
+   Aucune librairie, aucun id global : tout se cherche dans le conteneur. Classes CSS : suivi_bloc.css (préfixe suivi-).
+   Les choix (compte, période) sont gardés dans localStorage si permis (try/catch : jamais de plantage).
+   Brancher dans une autre page (ex. onglet du simulateur), dans cet ordre :
+     1. une balise style avec le contenu de suivi_bloc.css ;
+     2. une balise script type="application/json" id="donnees-suivi" contenant {} (construire.py la remplit seul) ;
+     3. une balise script avec le contenu de ce fichier ;
+     4. SuiviResultats.dessiner(conteneur, JSON.parse(document.getElementById("donnees-suivi").textContent)). */
+(function () {
+  "use strict";
+  const PERIODES = [["jour", "Jour", 1], ["sem", "7 jours", 7], ["mois", "30 jours", 30], ["t90", "90 jours", 90], ["m6", "6 mois", 182], ["an", "1 an", 365]];
+  const COMPTES = [["simon", "Simon"], ["mathieu", "Mathieu"], ["les2", "Les deux"]];
+  const ADD = ["n", "mises", "net", "jeu", "tapis", "mult", "vt", "vm", "h", "v", "naj", "aj", "aj2", "nhh", "mains", "sdev", "seur", "p2", "nset", "pj2", "j0", "psum", "pm", "g10", "g10a"];
+  const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  const CARTE = { h: "♥", d: "♦", c: "♣", s: "♠" };
+
+  // ---------------------------------------------------------------- petits outils
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const signe = x => x > 0 ? "+" : x < 0 ? "−" : "";
+  const nb = (x, d) => x == null || !isFinite(x) ? "–" : signe(x) + Math.abs(x).toFixed(d).replace(".", ",");
+  const nbs = (x, d) => x == null || !isFinite(x) ? "–" : (x < 0 ? "−" : "") + Math.abs(x).toFixed(d).replace(".", ",");
+  const eur = (x, d) => x == null || !isFinite(x) ? "–" : nb(x, d == null ? 2 : d) + " €";
+  const cls = x => x > 0 ? "suivi-gain" : x < 0 ? "suivi-perte" : "";
+  const ent = x => Math.round(x).toLocaleString("fr-FR");
+  const dateFr = d => d.slice(8, 10) + "/" + d.slice(5, 7);
+  const jourSem = d => JOURS[new Date(d + "T12:00:00").getDay()];
+  const premier = i => i === 0 ? " suivi-premiere" : "";
+  function phi(z) {                                     // loi normale : part des cas sous z
+    const t = 1 / (1 + 0.2316419 * Math.abs(z)), y = Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI);
+    const p = y * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return z >= 0 ? 1 - p : p;
+  }
+  function ajouteJours(d, k) { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + k); return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+  const cartes = t => !t ? "" : t.split(" ").map(c => "<span class='suivi-c" + ("hd".includes(c[1]) ? " suivi-rouge" : "") + "'>" + (c[0] === "T" ? "10" : c[0]) + CARTE[c[1]] + "</span>").join(" ");
+
+  // ---------------------------------------------------------------- calculs (une seule fonction par notion)
+  function vide() { const o = {}; ADD.forEach(k => o[k] = 0); o.mv = {}; o.ma = {}; o.sessions = []; o.pires = []; o.meilleurs = []; return o; }
+  function ajoute(a, j, nomCompte) {
+    ADD.forEach(k => a[k] += j[k] || 0);
+    for (const k in j.mv || {}) a.mv[k] = (a.mv[k] || 0) + j.mv[k];
+    for (const k in j.ma || {}) a.ma[k] = (a.ma[k] || 0) + j.ma[k];
+    (j.sessions || []).forEach(s => a.sessions.push(Object.assign({ compte: nomCompte }, s)));
+    a.pires = a.pires.concat(j.pires || []); a.meilleurs = a.meilleurs.concat(j.meilleurs || []);
+    return a;
+  }
+  // chiffres dérivés d'un groupe de tournois (session, jour, période)
+  function calcule(a, B) {
+    const r = Object.assign({}, a);
+    r.roi = a.mises ? a.net / a.mises : null;
+    r.parH = a.h > 0.05 ? a.net / a.h : null;
+    r.cev = a.naj ? a.aj / a.naj : null;
+    const sd = a.naj > 1 ? Math.sqrt(Math.max(0, (a.aj2 - a.aj * a.aj / a.naj) / (a.naj - 1))) : null;
+    r.ic = sd != null ? 1.96 * sd / Math.sqrt(a.naj) : null;
+    r.zT = a.vt > 0 ? a.tapis / Math.sqrt(a.vt) : null;
+    r.zM = a.vm > 0 ? a.mult / Math.sqrt(a.vm) : null;
+    r.zS = a.nhh > 0 && a.p2 > 0 && B && B.sigma ? a.seur / (B.sigma * Math.sqrt(a.p2)) : null;   // en € : signe = signe du montant
+    r.setupsEur = a.nhh > 0 ? a.seur : null;
+    r.cevHors = r.cev != null && a.nhh > 0 ? r.cev - a.sdev / a.nhh : null;
+    r.jeuHors = a.nhh > 0 ? a.jeu - a.seur : null;            // = réel sans la chance
+    r.couv = a.n ? a.nhh / a.n : 0;
+    // 30/10 (relecture) : UN seul « jeu » (hors setups quand les mains sont lues), sa fourchette à 95 %, le point mort
+    // de la mise jouée, et la part de chance des cartes quand la cEV sort très au-dessus (ou au-dessous) de la normale
+    r.jeuUn = r.jeuHors != null ? r.jeuHors : a.jeu;
+    r.chance = a.net - r.jeuUn;
+    r.pm = a.n ? a.pm / a.n : null;
+    const sdT = B && B.sd_aj ? B.sd_aj : sd;
+    r.icJeu = sdT && a.pj2 > 0 ? 1.96 * sdT * Math.sqrt(a.pj2) : null;
+    r.jeuMoy = B && B.cev_moy != null ? a.j0 + B.cev_moy * a.psum : null;
+    r.zCev = sdT && a.naj > 0 && B && B.cev_moy != null ? (r.cev - B.cev_moy) / (sdT / Math.sqrt(a.naj)) : null;
+    r.cartes = r.zCev != null && Math.abs(r.zCev) >= 1 && r.jeuMoy != null ? a.jeu - r.jeuMoy : null;   // cEV à plus d'1 écart-type de la moyenne
+    return r;
+  }
+  function verdictJeu(c, pm) {                          // pm = point mort de la mise jouée (0,25 € : +45 ; 1-2-5 € : +38)
+    if (c == null) return "jeu non mesuré";
+    if (pm == null) pm = 38;
+    if (c >= pm + 22) return "bon jeu";
+    if (c >= pm) return "jeu correct";
+    if (c >= 0) return "jeu sous le point mort";
+    return "jeu perdant";
+  }
+  // LA phrase de diagnostic : « Jour perdant à cause des setups (−2,1) et des tapis (−1,4), jeu correct (cEV +70) »
+  function diagnostic(r, mot) {
+    const e = mot === "Période" ? "e" : "";
+    const g = r.net > 0.005 ? mot + " gagnant" + e : r.net < -0.005 ? mot + " perdant" + e : mot + " à zéro";
+    // 30/10 (relecture) : en € et en part du gain. « +112 € = 29 € de jeu + 84 € de chance (multiplicateurs +54, ...) »
+    let t = (r.incomplet || (r.etat || []).some(e => !e.complet) ? "Jour incomplet · " : "") + g + " : " + eur(r.net, 0) + " = " + nbs(r.jeuUn, 0) + " € de jeu " +
+      (r.chance >= 0 ? "+ " : "− ") + Math.abs(r.chance).toFixed(0) + " € de chance";        // le détail : cartes « chance » juste dessous
+    if (Math.abs(r.net) >= 1) t += Math.abs(r.chance) > Math.abs(r.net) / 2 ? " : surtout de la chance" : " : surtout du jeu";
+    const c = r.cevHors != null ? r.cevHors : r.cev;
+    t += ". " + verdictJeu(c, r.pm)[0].toUpperCase() + verdictJeu(c, r.pm).slice(1) + " (cEV " + nb(c, 0) + ", point mort " + nb(r.pm, 0) + ")";
+    if (r.zS == null) t += ", setups en attente";
+    return t;
+  }
+  // Benjamini-Hochberg (10 %) sur tous les scores de chance des jours de la période
+  function joursHorsNormes(jours, B) {
+    const tests = [];
+    for (const j of jours) {
+      const r = calcule(j, B);
+      [["setups", r.zS], ["tapis", r.zT], ["multiplicateurs", r.zM]].forEach(([n, z]) => { if (z != null) tests.push({ d: j.date, n, z, p: 2 * (1 - phi(Math.abs(z))) }); });
+    }
+    tests.sort((a, b) => a.p - b.p);
+    let k = 0;
+    tests.forEach((t, i) => { if (t.p <= 0.10 * (i + 1) / tests.length) k = i + 1; });
+    return { n: tests.length, retenus: tests.slice(0, k) };
+  }
+
+  // ---------------------------------------------------------------- morceaux de page
+  function chance(nom, expl, z, euros, i) {
+    if (z == null) return "<div class='suivi-chance" + premier(i) + "'><div class='suivi-tete'><b>" + nom + "</b><span class='suivi-z suivi-attente'>en attente</span></div><p>" + expl + "</p><p class='suivi-attente'>Mains pas encore lues pour cette période : pas de chiffre (ce n'est pas 0).</p></div>";
+    const pos = Math.max(0, Math.min(100, (z + 3) / 6 * 100));
+    const mot = Math.abs(z) < 1 ? "normal" : z >= 2 ? "très chanceux" : z >= 1 ? "chanceux" : z <= -2 ? "très malchanceux" : "malchanceux";
+    return "<div class='suivi-chance" + premier(i) + "'><div class='suivi-tete'><b>" + nom + "</b><span class='suivi-z " + cls(euros) + "'>" + eur(euros, 0) + "</span></div>" +
+      "<div class='suivi-jauge' role='img' aria-label='" + nom + " " + nb(z, 1) + "'><i style='left:" + pos.toFixed(1) + "%'></i></div>" +
+      "<div class='suivi-reperes'><span>très malchanceux</span><span>normal</span><span>très chanceux</span></div>" +
+      "<p><b>" + mot[0].toUpperCase() + mot.slice(1) + "</b>. " + expl + "</p></div>";
+  }
+  const SERIES = [["Réel", "net", "var(--suivi-s1)", ""], ["Réel sans la chance (le jeu)", "sans", "var(--suivi-s3)", "6 4"]];
+  const NS = "http://www.w3.org/2000/svg";
+  const NBSP = " ";
+  const eurAxe = v => nbs(v, 0) + NBSP + "€";
+  // axe vertical : repères ronds, zéro toujours dedans, un peu d'air sous le plus bas et au-dessus du plus haut
+  function echelleCourbe(lo, hi) {
+    const span = (hi - lo) || 1, brut = span / 4, p = Math.pow(10, Math.floor(Math.log10(brut))), f = brut / p;
+    const pas = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+    const dmin = lo - span * 0.06, dmax = hi + span * 0.08, ticks = [];
+    for (let v = Math.ceil(dmin / pas - 1e-9) * pas; v <= dmax + 1e-9; v += pas) ticks.push(Math.round(v * 1000) / 1000);
+    return { ticks, dmin, dmax };
+  }
+  function courbe(points) {
+    if (points.length < 2) return { html: "<p class='suivi-sous'>Courbe : il faut au moins 2 points (2 sessions ou 2 jours).</p>" };
+    const cum = {}; SERIES.forEach(s => { let t = 0; cum[s[1]] = [0].concat(points.map(p => (t += (p[s[1]] == null ? NaN : p[s[1]])))); });
+    const finale = s => { const v = cum[s[1]]; return v.slice(1).every(isFinite) ? v[v.length - 1] : null; };   // série incomplète (setups en attente) : pas tracée
+    const leg = "<div class='suivi-legende'>" + SERIES.map(s => { const f = finale(s);
+      return "<span><i style='border-color:" + s[2] + ";border-top-style:" + (s[3] ? "dashed" : "solid") + "'></i>" + s[0] + " <b class='" + (f === null ? "suivi-attente" : cls(f)) + "'>" + (f === null ? "en attente" : eur(f)) + "</b></span>"; }).join("") + "</div>";
+    return { html: leg + "<div class='suivi-graphe'><div class='suivi-bulle'></div></div>", points, cum, finale };
+  }
+  // Dessin à la vraie largeur de la carte (pas d'étirement), refait si la fenêtre change ; survol ou toucher = jour + montants.
+  function brancherBulle(racine, c) {
+    if (racine._ro) { racine._ro.disconnect(); racine._ro = null; }
+    if (racine._hors) { document.removeEventListener("pointerdown", racine._hors); racine._hors = null; }
+    const g = racine.querySelector(".suivi-graphe"); if (!g || !c.points) return;
+    const b = g.querySelector(".suivi-bulle"), pts = c.points, n = pts.length, sv = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+    const tracees = SERIES.filter(s => c.finale(s) !== null);
+    const tous = [].concat(...tracees.map(s => c.cum[s[1]])).concat([0]);
+    const ech = echelleCourbe(Math.min(...tous), Math.max(...tous));
+    let largeur = 0, actuel = -1;
+    function dessiner() {
+      const W = Math.max(280, Math.round(g.clientWidth || 340)); if (W === largeur) return; largeur = W;
+      const vieux = g.querySelector("svg"); if (vieux) vieux.remove();
+      b.style.display = "none"; actuel = -1;
+      const tel = W < 520, H = tel ? 240 : 290;
+      const fins = tracees.map(s => eur(c.finale(s)));
+      const lw = Math.max(4, ...fins.map(t => t.length)), yl = Math.max(...ech.ticks.map(t => eurAxe(t).length));
+      const m = { l: Math.round(14 + yl * 6.4), r: Math.round(14 + lw * 7.2), t: 14, b: 34 };
+      const pw = W - m.l - m.r, ph = H - m.t - m.b;
+      const X = i => m.l + pw * i / n, Y = v => m.t + ph * (1 - (v - ech.dmin) / (ech.dmax - ech.dmin));
+      const svg = sv("svg", { viewBox: "0 0 " + W + " " + H, width: W, height: H, role: "img", tabindex: 0,
+        "aria-label": "Courbe cumulée en euros : " + SERIES.map(s => s[0] + " " + (c.finale(s) === null ? "en attente" : eur(c.finale(s)))).join(", ") + ". Flèches gauche et droite pour parcourir." });
+      // grille fine, zéro net
+      ech.ticks.forEach(t => {
+        if (t !== 0) svg.appendChild(sv("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: "var(--suivi-trait)", "stroke-width": 1 }));
+        const tx = sv("text", { x: m.l - 8, y: Y(t) + 4, "text-anchor": "end", class: t === 0 ? "suivi-t0" : "" }); tx.textContent = eurAxe(t); svg.appendChild(tx);
+      });
+      svg.appendChild(sv("line", { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: "var(--suivi-texte-3)", "stroke-width": 1.5 }));
+      // noms des points en bas : un sur k selon leur longueur, le dernier toujours écrit, jamais collés
+      const ecart = pw / n, wmax = Math.max(...pts.map(p => String(p.nom).length)) * 6.3, k = Math.max(1, Math.ceil((wmax + 12) / ecart));
+      for (let i = n; i >= 1; i -= k) {
+        const nom = String(pts[i - 1].nom), demi = nom.length * 3.15, xi = X(i);
+        svg.appendChild(sv("line", { x1: xi, x2: xi, y1: H - m.b, y2: H - m.b + 4, stroke: "var(--suivi-texte-3)", "stroke-width": 1 }));
+        const tl = sv("text", { x: Math.max(demi + 2, Math.min(W - demi - 2, xi)), y: H - 10, "text-anchor": "middle" }); tl.textContent = nom; svg.appendChild(tl);
+      }
+      // courbes, points de fin, valeur finale (décalée de 9 px au plus si deux valeurs se touchent, sinon omise : la légende la porte)
+      const bouts = [];
+      tracees.forEach((s, j) => {
+        const v = c.cum[s[1]];
+        svg.appendChild(sv("polyline", { fill: "none", stroke: s[2], "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-dasharray": s[3],
+          points: v.map((y, i) => X(i).toFixed(1) + "," + Y(y).toFixed(1)).join(" ") }));
+        bouts.push({ s, y: Y(v[n]), txt: fins[j] });
+      });
+      bouts.forEach(o => svg.appendChild(sv("circle", { cx: X(n), cy: o.y, r: 5, fill: o.s[2], stroke: "var(--suivi-carte)", "stroke-width": 2 })));
+      let dernierY = -1e9;
+      bouts.slice().sort((a, z) => a.y - z.y).forEach(o => {
+        let y = o.y; const pousse = dernierY + 15 - y;
+        if (pousse > 0) { if (pousse > 9) return; y += pousse; }
+        dernierY = y;
+        const tx = sv("text", { x: X(n) + 11, y: y + 4, class: "suivi-fin" }); tx.textContent = o.txt; svg.appendChild(tx);
+      });
+      // survol / toucher
+      const cur = sv("line", { y1: m.t, y2: H - m.b, stroke: "var(--suivi-texte-3)", "stroke-width": 1, visibility: "hidden" }); svg.appendChild(cur);
+      const ronds = tracees.map(s => { const r = sv("circle", { r: 4.5, fill: s[2], stroke: "var(--suivi-carte)", "stroke-width": 2, visibility: "hidden" }); svg.appendChild(r); return r; });
+      const sur = sv("rect", { x: m.l - 12, y: 0, width: pw + 24, height: H, fill: "transparent" }); svg.appendChild(sur);
+      g.insertBefore(svg, b);
+      function cacher() { actuel = -1; cur.setAttribute("visibility", "hidden"); b.style.display = "none"; ronds.forEach(r => r.setAttribute("visibility", "hidden")); }
+      function aller(i) {
+        i = Math.max(1, Math.min(n, i)); actuel = i;
+        const r = svg.getBoundingClientRect(), echelle = r.width / W, xc = X(i);
+        cur.setAttribute("x1", xc); cur.setAttribute("x2", xc); cur.setAttribute("visibility", "visible");
+        tracees.forEach((s, j) => { ronds[j].setAttribute("cx", xc); ronds[j].setAttribute("cy", Y(c.cum[s[1]][i])); ronds[j].setAttribute("visibility", "visible"); });
+        b.innerHTML = "<div class='suivi-bd'>" + esc(pts[i - 1].nom) + "</div>" + SERIES.map(s => { const v = c.cum[s[1]][i];
+          return "<div class='suivi-br'><i style='border-color:" + s[2] + ";border-top-style:" + (s[3] ? "dashed" : "solid") + "'></i><span>" + (s[1] === "net" ? "Réel" : "Sans la chance") + "</span><b class='" + (isFinite(v) ? cls(v) : "suivi-attente") + "'>" + (isFinite(v) ? eur(v) : "en attente") + "</b></div>"; }).join("");
+        b.style.display = "block";
+        // la bulle se pose là où elle cache le moins de courbe, sans jamais couvrir le trait ni ses points ; sinon au-dessus du graphique
+        const tw = b.offsetWidth / echelle, th = b.offsetHeight / echelle; let best = null;
+        [[xc + 14, m.t, 0], [xc - 14 - tw, m.t, 0], [xc + 14, H - m.b - th - 4, 0], [xc - 14 - tw, H - m.b - th - 4, 0], [xc + 14, (H - th) / 2, 0], [xc - 14 - tw, (H - th) / 2, 0], [xc - tw / 2, -th - 6, 6]].forEach(p => {
+          const x0 = Math.max(0, Math.min(W - tw, p[2] ? p[0] : Math.max(m.l - 4, p[0]))), y0 = p[1]; let cout = p[2];
+          if (!p[2] && xc > x0 - 8 && xc < x0 + tw + 8) cout += 40;
+          if (!p[2]) tracees.forEach(s => { const v = c.cum[s[1]];
+            for (let q = 0; q < n; q++) for (let u = 0; u <= 10; u++) {
+              const px = X(q) + (X(q + 1) - X(q)) * u / 10, py = Y(v[q] + (v[q + 1] - v[q]) * u / 10);
+              if (px > x0 - 4 && px < x0 + tw + 4 && py > y0 - 4 && py < y0 + th + 4) cout++;
+            } });
+          if (best === null || cout < best.cout) best = { x: x0, y: y0, cout };
+        });
+        b.style.left = best.x * echelle + "px"; b.style.top = best.y * echelle + "px";
+      }
+      const bouge = ev => { const r = svg.getBoundingClientRect(); aller(Math.round(((ev.clientX - r.left) / r.width * W - m.l) / pw * n)); };
+      sur.addEventListener("pointermove", bouge); sur.addEventListener("pointerdown", bouge);
+      sur.addEventListener("pointerleave", ev => { if (ev.pointerType === "mouse") cacher(); });
+      svg.addEventListener("keydown", ev => {
+        const t = ev.key === "ArrowLeft" ? (actuel < 0 ? n : actuel - 1) : ev.key === "ArrowRight" ? (actuel < 0 ? n : actuel + 1) : ev.key === "Home" ? 1 : ev.key === "End" ? n : null;
+        if (t !== null) { aller(t); ev.preventDefault(); }
+      });
+      svg.addEventListener("blur", cacher);
+      racine._cacher = cacher;
+    }
+    dessiner();
+    if (window.ResizeObserver) { racine._ro = new ResizeObserver(() => dessiner()); racine._ro.observe(g); }
+    else window.addEventListener("resize", () => dessiner());
+    // au doigt, un toucher ailleurs referme la bulle
+    racine._hors = ev => { if (!g.contains(ev.target) && racine._cacher) racine._cacher(); };
+    document.addEventListener("pointerdown", racine._hors);
+  }
+  function setups(liste, titre, mot) {
+    if (!liste.length) return "<h2>" + titre + "</h2><p class='suivi-sous'>Aucun " + mot + " setup extrême.</p>";
+    return "<h2>" + titre + "</h2>" + liste.map((c, i) => "<div class='suivi-setup" + premier(i) + "'><div class='suivi-haut'><span>" + cartes(c.h) + " <span class='suivi-sous'>contre</span> " + cartes(c.v) +
+      (c.adv > 1 ? " <span class='suivi-sous'>(+1 autre)</span>" : "") + "</span><b class='" + cls(c.e) + "'>" + eur(c.e) + "</b></div>" +
+      "<div class='suivi-bas'>" + esc(c.cat) + " · " + (c.rue === "preflop" ? "à tapis avant le flop" : "argent entré au " + c.rue + " sur " + cartes(c.bm)) +
+      " · équité " + Math.round(c.eq * 100) + " %" + (c.bd ? " · board final " + cartes(c.bd) : "") + "</div>" +
+      "<div class='suivi-bas'>" + esc(c.q.slice(3, 5) + "/" + c.q.slice(0, 2) + " à " + c.q.slice(6, 11)) + " · " + esc(c.c === "simon" ? "Simon" : c.c === "mathieu" ? "Mathieu" : c.c) + " · " + String(c.b).replace(".", ",") + " € · " + nb(c.j, 0) + " jetons à l'équité</div></div>").join("");
+  }
+  function multiplicateurs(r) {
+    // 30/10 : une ligne par multiplicateur, du plus gros au plus petit. Fréquence = barème officiel PMU (1 € et plus).
+    const FREQ = { "1000": 1e-05, "200": 3e-05, "100": 0.0001, "20": 0.0005, "10": 0.003, "5": 0.03, "4": 0.13, "3": 0.38128, "2": 0.45508 };
+    const K = Object.keys(FREQ).sort((p, x) => +x - +p);
+    const f1 = v => v >= 10 ? Math.round(v).toLocaleString("fr-FR") : v.toFixed(v >= 1 ? 1 : 2).replace(".", ",");
+    const tous = n => n >= 1000 ? Math.round(n).toLocaleString("fr-FR") : String(Math.round(n));
+    let t = "<div class='suivi-defile'><table><tr><th>Multiplicateur</th><th>Tirés</th><th>Attendus</th><th>Arrive 1 fois sur</th></tr>";
+    K.forEach(k => {
+      const v = r.mv[k] || 0, a = r.ma[k] || 0, gros = +k >= 10;
+      const c = v > a + 0.5 ? "pos" : (v < a - 0.5 && a >= 1 ? "neg" : "");
+      t += "<tr><td><b>x" + k + "</b></td><td" + (c ? " class='" + cls(c === "pos" ? 1 : -1) + "'" : "") + ">" + v + "</td><td>" + f1(a) + "</td><td>" +
+        tous(1 / FREQ[k]) + (gros ? " tournois" : " victoires") + "</td></tr>";
+    });
+    t += "</table></div>";
+    if (!K.some(k => r.ma[k])) t += "<p class='suivi-attente'>Pas encore compté pour cette période (journée en direct : comptée une fois rangée).</p>";
+    t += "<p class='suivi-sous' style='margin-top:6px'>x2 à x5 : comptés sur nos victoires (seul le 1er est payé). x10 et plus : comptés sur tous nos tournois à 1 € et plus (les 3 places sont payées). x50 n'existe pas chez PMU. Victoires dont le multiplicateur n'a pas pu être lu : non comptées.</p>";
+    return t;
+  }
+
+  // ---------------------------------------------------------------- dessin
+  function dessiner(conteneur, D) {
+    if (!conteneur) return;
+    const racine = document.createElement("div");
+    racine.className = "suivi-racine";
+    conteneur.innerHTML = ""; conteneur.append(racine);
+    if (!D || !D.comptes) { racine.innerHTML = "<div class='suivi-msg'>Données de suivi pas encore disponibles.</div>"; return; }
+    const B = D.base_setups || {};
+    const etat = { compte: "les2", periode: "jour", date: null };
+    try { const s = JSON.parse(localStorage.getItem("suivi-choix") || "{}"); if (s.compte) etat.compte = s.compte; if (s.periode) etat.periode = s.periode; } catch (e) { /* stockage interdit */ }
+    const g = D.genere || "";
+    racine.innerHTML = "<div class='suivi-sous'>Chiffres du " + g.slice(8, 10) + "/" + g.slice(5, 7) + " à " + g.slice(11, 16) + " · refaits seuls toutes les heures</div>" +
+      "<div class='suivi-choix' data-r='compte'></div><div class='suivi-choix' data-r='periode'></div>" +
+      "<div class='suivi-jour'><button type='button' data-r='avant' aria-label='Jour d’avant'>‹</button><select data-r='date' aria-label='Jour'></select><button type='button' data-r='apres' aria-label='Jour d’après'>›</button></div>" +
+      "<div data-r='contenu'></div>";
+    const q = r => racine.querySelector("[data-r='" + r + "']");
+    const comptesChoisis = () => etat.compte === "les2" ? ["simon", "mathieu"] : [etat.compte];
+    const toutesDates = () => { const s = new Set(); for (const c of comptesChoisis()) for (const j of (D.comptes[c] || { jours: [] }).jours) s.add(j.date); return [...s].sort(); };
+    function jourDe(date) {
+      let a = null;
+      for (const c of comptesChoisis()) {
+        const cj = (D.comptes[c] || { jours: [] }).jours.find(j => j.date === date);
+        if (cj) { a = ajoute(a || vide(), cj, D.comptes[c].nom); a.etat = (a.etat || []).concat([{ nom: D.comptes[c].nom, complet: cj.complet !== false, recu: D.comptes[c].recu || "" }]); }
+      }
+      if (a) a.date = date;
+      return a;
+    }
+    function boutons(zone, liste, cle) {
+      zone.innerHTML = "";
+      for (const [v, t] of liste) {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String(etat[cle] === v));
+        b.onclick = () => { etat[cle] = v; try { localStorage.setItem("suivi-choix", JSON.stringify({ compte: etat.compte, periode: etat.periode })); } catch (e) { /* rien */ } rendu(); };
+        zone.append(b);
+      }
+    }
+    function rendu() {
+      boutons(q("compte"), COMPTES, "compte");
+      boutons(q("periode"), PERIODES.map(p => [p[0], p[1]]), "periode");
+      const dates = toutesDates(), sel = q("date"), C = q("contenu");
+      if (!dates.length) { C.innerHTML = "<div class='suivi-msg'>Aucun tournoi pour ce choix.</div>"; return; }
+      if (!etat.date || !dates.includes(etat.date)) etat.date = dates[dates.length - 1];
+      sel.innerHTML = dates.slice().reverse().map(d => "<option value='" + d + "'" + (d === etat.date ? " selected" : "") + ">" + jourSem(d) + " " + dateFr(d) + "</option>").join("");
+      const long = PERIODES.find(p => p[0] === etat.periode)[2], debut = ajouteJours(etat.date, -(long - 1));
+      const jours = dates.filter(d => d >= debut && d <= etat.date).map(jourDe).filter(Boolean);
+      const a = vide(); jours.forEach(j => ajoute(a, j, null));
+      const r = calcule(a, B), unJour = long === 1, mot = unJour ? "Jour" : "Période";
+      r.incomplet = unJour && jours.length && jours[0].etat.some(e => !e.complet);
+      const recus = comptesChoisis().map(c => D.comptes[c] && D.comptes[c].recu ? D.comptes[c].nom + " reçu jusqu'au " + dateFr(D.comptes[c].recu.slice(0, 10)) + " " + D.comptes[c].recu.slice(11, 16) : "").filter(Boolean).join(" · ");
+      let h = "<div class='suivi-carte'><div class='suivi-diag'>" + esc(diagnostic(r, mot)) + "<small>" +
+        (unJour ? jourSem(etat.date) + " " + dateFr(etat.date) : "Du " + dateFr(jours.length ? jours[0].date : debut) + " au " + dateFr(etat.date) + " · " + jours.length + " jour(s) joué(s)") +
+        (debut < dates[0] && !unJour ? " · données depuis le " + dateFr(dates[0]) + " seulement" : "") +
+        (unJour && jours.length ? jours[0].etat.map(e => " · " + e.nom + (e.complet ? " : jour complet" : " : jour incomplet, données reçues jusqu'à " + e.recu.slice(11, 16))).join("") : "") +
+        (!unJour && recus ? " · " + recus : "") + "</small></div></div>";
+      h += "<div class='suivi-carte'><div class='suivi-tuiles'>" +
+        "<div class='suivi-tuile'><small>Gain réel</small><b class='" + cls(r.net) + "'>" + eur(r.net) + "</b><span>ROI " + (r.roi == null ? "–" : nb(100 * r.roi, 1) + " %") + "</span></div>" +
+        "<div class='suivi-tuile'><small>€ par heure</small><b class='" + cls(r.parH) + "'>" + eur(r.parH) + "</b><span>" + nbs(r.h, 1) + " h de jeu</span></div>" +
+        "<div class='suivi-tuile'><small>Tournois</small><b>" + ent(r.n) + "</b><span>" + r.v + " victoires (" + (r.n ? Math.round(100 * r.v / r.n) : 0) + " %)</span></div>" +
+        "<div class='suivi-tuile'><small>Mains</small><b>" + (r.nhh ? ent(r.mains) : "<span class='suivi-attente'>en attente</span>") + "</b><span>lues sur " + Math.round(100 * r.couv) + " % des tournois</span></div>" +
+        "<div class='suivi-tuile suivi-large'><small>cEV (jetons gagnés par tournoi, tapis ajustés)</small><b class='" + cls(r.cev) + "'>" + nb(r.cev, 0) + "</b><span>95 % de chances que la vraie cEV soit entre " + nb(r.cev - r.ic, 0) + " et " + nb(r.cev + r.ic, 0) + " · point mort " + nb(r.pm, 0) + (r.cevHors != null ? " · hors setups : " + nb(r.cevHors, 0) : "") + "</span></div>" +
+        "</div></div>";
+      h += "<div class='suivi-carte'><h2>D'où vient le gain</h2>" +
+        "<div class='suivi-ligne suivi-premiere'><span class='suivi-nom'>Jeu" + (r.icJeu != null ? "<br><small class='suivi-sous'>vraie valeur probablement entre " + nb(r.jeuUn - r.icJeu, 0) + " et " + nb(r.jeuUn + r.icJeu, 0) + " €</small>" : "") + "</span><b class='" + cls(r.jeuUn) + "'>" + eur(r.jeuUn) + "</b></div>" +
+        (r.cartes != null ? "<div class='suivi-ligne'><span class='suivi-nom'>dont " + (r.cartes > 0 ? "chance" : "malchance") + " probable des cartes<br><small class='suivi-sous'>cEV " + nb(r.cev, 0) + " contre " + nb(B.cev_moy, 0) + " en moyenne : " + (r.cartes > 0 ? "ce qui dépasse" : "ce qui manque") + " vient surtout des cartes reçues</small></span><b>" + eur(r.cartes, 0) + "</b></div>" : "") +
+        "<div class='suivi-ligne'><span class='suivi-nom'>+ Chance (tapis, multiplicateurs, setups : détail juste dessous)</span><b class='" + cls(r.chance) + "'>" + eur(r.chance) + "</b></div>" +
+        "<div class='suivi-ligne suivi-total'><span>= Gain réel</span><b class='" + cls(r.net) + "'>" + eur(r.net) + "</b></div>" +
+        "<p class='suivi-sous'>Jeu = ce que la cEV rapporte, hors setups. Sans rakeback ni classements.</p></div>";
+      h += "<div class='suivi-carte'><h2>La chance en un chiffre</h2>" +
+        chance("Setups", "La donne des cartes dans les confrontations extrêmes (77 contre 66, couleur contre couleur), comparée à la moyenne.", r.zS, r.setupsEur, 0) +
+        chance("Tapis", "Résultat des tapis comparé à l'équité au moment du tapis.", r.zT, r.tapis, 1) +
+        chance("Multiplicateurs", "Multiplicateurs tirés comparés au barème officiel PMU.", r.zM, r.mult, 2) + "</div>";
+      const deux = etat.compte === "les2";
+      const pts = unJour ? r.sessions.map(s => { const c = calcule(Object.assign(vide(), s), B); return { nom: (deux ? (s.compte || "") + " " : "") + (s.debut || "fin"), net: s.net, sans: c.jeuUn }; })
+        : jours.map(j => { const c = calcule(j, B); return { nom: dateFr(j.date), net: j.net, sans: c.jeuUn }; });
+      const cb = courbe(pts);
+      h += "<div class='suivi-carte'><h2>Courbe " + (unJour ? "des sessions du jour" : "jour par jour") + " (€ cumulés)</h2>" + cb.html + "</div>";
+      if (unJour) {
+        h += "<div class='suivi-carte'><h2>Les sessions</h2><div class='suivi-defile'><table><tr><th>Session</th><th>Tournois</th><th>Réel</th><th>Jeu</th><th>Setups</th><th>Tapis</th><th>Mult.</th><th>cEV</th></tr>" +
+          r.sessions.map(s => { const c = calcule(Object.assign(vide(), s), B); return "<tr><td>" + esc((deux ? s.compte + " " : "") + (s.id === "hors session" ? "fin de session pas encore rangée" : s.debut + (s.direct ? " (résumé)" : ""))) + "</td><td>" + s.n + "</td><td class='" + cls(s.net) + "'>" + nb(s.net, 1) + "</td><td>" + nb(c.jeuUn, 1) + "</td><td>" + (c.setupsEur == null ? "<span class='suivi-attente'>attente</span>" : nb(c.setupsEur, 1)) + "</td><td>" + nb(s.tapis, 1) + "</td><td>" + nb(s.mult, 1) + "</td><td>" + nb(c.cev, 0) + "</td></tr>"; }).join("") +
+          "</table></div><p class='suivi-sous'>En €. Jeu = hors setups. Sur téléphone, faire glisser le tableau de côté.</p></div>";
+      } else {
+        const bh = joursHorsNormes(jours, B);
+        h += "<div class='suivi-carte'><h2>Jour par jour</h2>" + jours.slice().reverse().map((j, i) => "<div class='suivi-item" + premier(i) + "'><b>" + jourSem(j.date) + " " + dateFr(j.date) + " · <span class='" + cls(j.net) + "'>" + eur(j.net) + "</span></b> · " + j.n + " tournois<br>" + esc(diagnostic(calcule(j, B), "Jour")) + "</div>").join("") +
+          "<p class='suivi-sous' style='margin-top:8px'>Vraiment hors normes après correction pour " + bh.n + " tests (méthode Benjamini-Hochberg, 10 %) : " +
+          (bh.retenus.length ? bh.retenus.map(t => dateFr(t.d) + " " + t.n + " (" + nb(t.z, 1) + ")").join(", ") : "aucun. Les écarts vus restent dans ce que le hasard produit sur autant de jours.") + "</p></div>";
+      }
+      h += "<div class='suivi-carte'><h2>Multiplicateurs : tirés contre attendus</h2>" + multiplicateurs(r) + "</div>";
+      // 30/10 : lexique retiré (demande de Simon)
+      C.innerHTML = h;
+      brancherBulle(racine, cb);
+    }
+    q("date").onchange = e => { etat.date = e.target.value; rendu(); };
+    const pas = k => { const ds = toutesDates(), i = ds.indexOf(etat.date) + k; if (i >= 0 && i < ds.length) { etat.date = ds[i]; rendu(); } };
+    q("avant").onclick = () => pas(-1);
+    q("apres").onclick = () => pas(1);
+    rendu();
+  }
+
+  window.SuiviResultats = { dessiner, calcule, diagnostic };
+})();
+
+</script>
+<script>
+(function () {
+  "use strict";
+  const DONNEES = "https://raw.githubusercontent.com/colfersimon/tableau/donnees/suivi.enc";
+  const zone = document.getElementById("suivi");
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  function cleDuLien() {
+    const h = location.hash.replace(/^#/, "").replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  async function dechiffrer(cle, texte) {          // même format que le lien fixe (AES-256-CBC + HMAC-SHA256)
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kMac = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", cle.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct)));
+  }
+  const message = t => { zone.innerHTML = "<div class='suivi-msg'>" + t + "</div>"; };
+  document.getElementById("theme").onclick = () => {
+    const sombre = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = sombre ? "light" : "dark";
+  };
+  (async function () {
+    let local = {};
+    try { local = JSON.parse(document.getElementById("donnees-suivi").textContent || "{}"); } catch (e) { local = {}; }
+    if (local && local.comptes) { SuiviResultats.dessiner(zone, local); return; }
+    const cle = cleDuLien();
+    if (!cle) { message("Lien incomplet : il manque la fin du lien (après le #). Prends le lien du tableau et remplace « tableau/ » par « tableau/suivi.html »."); return; }
+    try {
+      const r = await fetch(DONNEES + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      SuiviResultats.dessiner(zone, await dechiffrer(cle, await r.text()));
+    } catch (e) {
+      message(String(e.message) === "clé fausse" ? "Lien faux : la clé ne correspond pas." : "Données pas encore disponibles (" + String(e.message).replace(/[<>&]/g, "") + "). Réessaie dans quelques minutes.");
+    }
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Carnet</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f4f3ef; --carte: #fcfcfb; --teinte: #f0efe9; --trait: #e4e2db; --trait-fort: #c7c4b8;
+    --texte: #0b0b0b; --texte-2: #4a4944; --texte-3: #68665f;
+    --gain: #006300; --perte: #b3261e; --info: #1c5cab; --alerte-fond: #fff4d6; --alerte-trait: #e0b43a;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0f0f0e; --carte: #1a1a19; --teinte: #232321; --trait: #2c2c2a; --trait-fort: #42423e;
+      --texte: #f0efec; --texte-2: #c3c2b7; --texte-3: #9d9c92;
+      --gain: #4cc561; --perte: #f27d73; --info: #86b6ef; --alerte-fond: #2e2810; --alerte-trait: #8a6d12;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0f0f0e; --carte: #1a1a19; --teinte: #232321; --trait: #2c2c2a; --trait-fort: #42423e;
+    --texte: #f0efec; --texte-2: #c3c2b7; --texte-3: #9d9c92;
+    --gain: #4cc561; --perte: #f27d73; --info: #86b6ef; --alerte-fond: #2e2810; --alerte-trait: #8a6d12;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--page); color: var(--texte); font: 16px/1.4 var(--sans); }
+  .page { max-width: 960px; margin: 0 auto; padding: 16px 16px 40px; padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  h1, h2, h3, h4, p { margin: 0; }
+  button { font: inherit; color: inherit; }
+
+  .haut { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
+  .doux { color: var(--texte-2); font-size: .875rem; }
+  .icone { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 1px solid var(--trait); border-radius: 12px; background: var(--carte); cursor: pointer; }
+  .icone:focus-visible, .chip:focus-visible, .cel:focus-visible, .plus:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .icone svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  .bandeau { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--alerte-trait); background: var(--alerte-fond); border-radius: 12px; font-size: .875rem; }
+  .bandeau p + p { margin-top: 4px; }
+
+  .filtres { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-height: 44px; padding: 0 12px; border: 1px solid var(--trait-fort); border-radius: 22px; background: var(--carte); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .chip[aria-pressed="true"] { background: var(--texte); color: var(--page); border-color: var(--texte); font-weight: 600; }
+  .cle { display: inline-block; width: 14px; height: 3px; border-radius: 2px; flex: none; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--trait-fort); font-size: .6875rem; line-height: 1.5; color: var(--texte-2); font-weight: 500; white-space: nowrap; }
+  .chip[aria-pressed="true"] .tag { color: var(--page); border-color: currentColor; }
+  .tag.ex { border-color: var(--alerte-trait); background: var(--alerte-fond); color: var(--texte); }
+
+  .carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .carte h2 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+  .carte.tabcarte { padding: 16px 8px 12px; }
+  .carte.tabcarte > h2, .carte.tabcarte > .doux, .carte.tabcarte > .plus { margin-left: 8px; }
+
+  .chiffres { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .portee { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; color: var(--texte-2); font-size: .875rem; }
+  .hero .gros { font-size: 3rem; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+  .hero .gros.mot { font-size: 2rem; color: var(--texte-2); font-weight: 600; }
+  .sous { color: var(--texte-2); font-size: .875rem; }
+  .tuiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--trait); }
+  .tuile .lbl { color: var(--texte-2); font-size: .8125rem; }
+  .tuile .val { font-size: 1.5rem; font-weight: 650; letter-spacing: -.01em; line-height: 1.2; margin-top: 2px; }
+  .tuile .sous { font-size: .75rem; margin-top: 2px; }
+  .lignes { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--trait); display: grid; gap: 6px; font-size: .875rem; color: var(--texte-2); }
+  .lignes .nom { color: var(--texte); font-weight: 600; }
+  .lignes .item { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; white-space: nowrap; }
+  .plus-v { color: var(--gain); } .moins-v { color: var(--perte); }
+
+  .legende { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: .875rem; }
+  .legende .li { display: inline-flex; align-items: center; gap: 6px; }
+  .legende .cle { width: 16px; height: 3px; }
+  #courbe { position: relative; }
+  #courbe svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+  #courbe text { font: 11.5px var(--sans); fill: var(--texte-3); font-variant-numeric: tabular-nums; }
+  #courbe text.zero { fill: var(--texte-2); font-weight: 600; }
+  #courbe text.fin { font: 650 12.5px var(--sans); fill: var(--texte); }
+  #courbe svg:focus { outline: none; }
+  #courbe svg:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; border-radius: 6px; }
+  .tip { position: absolute; top: 0; z-index: 2; pointer-events: none; min-width: 150px; max-width: 220px; padding: 8px 10px; border: 1px solid var(--trait-fort); border-radius: 10px; background: var(--carte); box-shadow: 0 4px 14px rgba(0, 0, 0, .18); font-size: .8125rem; }
+  .tip .date { color: var(--texte-2); margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 6px; }
+  .tip .r b { font-weight: 650; margin-left: auto; padding-left: 10px; font-variant-numeric: tabular-nums; }
+  .tip .cle { width: 12px; }
+  .vide { color: var(--texte-2); padding: 12px 0; }
+
+  .defile { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+  .tab { min-width: 100%; }
+  .lig { display: grid; align-items: stretch; justify-content: start; border-bottom: 1px solid var(--trait); }
+  .lig.tete { background: var(--carte); font-size: .8125rem; color: var(--texte-2); border-bottom-color: var(--trait-fort); }
+  .lig.tete > div { padding: 8px 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .jr { padding: 8px 4px 8px 6px; display: flex; flex-direction: column; justify-content: center; line-height: 1.2; }
+  .jr .sem { color: var(--texte-2); font-size: .75rem; }
+  .jr .dt { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .jr .auj { color: var(--info); font-size: .625rem; font-weight: 600; white-space: nowrap; }
+  .col-total { background: var(--teinte); }
+  .cel { display: flex; flex-direction: column; justify-content: center; gap: 2px; width: 100%; min-height: 56px; padding: 8px 4px; border: 0; border-radius: 0; background: transparent; text-align: left; cursor: pointer; }
+  .cel:hover { background: var(--teinte); }
+  .col-total .cel:hover { background: var(--trait); }
+  .cel[aria-expanded="true"] { background: var(--trait); }
+  .cel .net { font-weight: 650; font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .cel .pt { color: var(--texte-2); font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .cel .net .tilde { color: var(--texte-2); font-weight: 500; margin-left: 3px; }
+  .cel.etat { color: var(--texte-2); font-size: .8125rem; }
+  .cel.etat .mot { font-style: italic; }
+  .cel.etat.attente { background-image: repeating-linear-gradient(135deg, transparent 0 7px, var(--trait) 7px 8px); }
+  .cel .mini { font-size: .6875rem; color: var(--texte-2); }
+  .detail { display: block; border-bottom: 1px solid var(--trait-fort); background: var(--teinte); }
+  .panneau { position: sticky; left: 0; padding: 14px 12px 16px; width: var(--larg, 100%); max-width: 100%; }
+  .panneau > * { max-width: 640px; }
+  .panneau h3 { font-size: 1rem; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .panneau h4 { font-size: .8125rem; font-weight: 650; color: var(--texte-2); margin: 14px 0 4px; }
+  .faits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 12px 0 0; }
+  .faits div { min-width: 0; }
+  .faits dt { color: var(--texte-2); font-size: .75rem; }
+  .faits dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .faits dd small { display: block; font-weight: 400; color: var(--texte-2); font-size: .75rem; }
+  .sess { list-style: none; margin: 0; padding: 0; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+  .sess li { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--trait); }
+  .sess li:first-child { border-top: 0; }
+  .sess .sub { grid-column: 1 / -1; color: var(--texte-2); font-size: .75rem; }
+  .note { margin-top: 12px; font-size: .8125rem; color: var(--texte-2); }
+  .plus { margin-top: 12px; min-height: 44px; padding: 0 16px; border: 1px solid var(--trait-fort); border-radius: 22px; background: var(--carte); cursor: pointer; }
+
+  .pied { margin-top: 8px; color: var(--texte-2); font-size: .8125rem; }
+  .pied h2 { font-size: .875rem; color: var(--texte); margin-bottom: 6px; }
+  .pied ul { margin: 0 0 12px; padding-left: 18px; }
+  .pied li { margin-bottom: 3px; }
+
+  @media (min-width: 640px) {
+    .page { padding-top: 24px; }
+    h1 { font-size: 1.5rem; }
+    .tuile .val { font-size: 1.875rem; }
+    .faits { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .filtres { flex-direction: row; justify-content: space-between; flex-wrap: wrap; }
+  }
+  @media (max-width: 380px) { .hero .gros { font-size: 2.75rem; } .tuile .val { font-size: 1.3rem; } }
+  .auj { margin-bottom: 16px; }
+  .auj .auj-hero { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 18px 16px; text-align: center; }
+  .auj .auj-t { color: var(--texte-2); font-size: .8125rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+  .auj .auj-gros { font-size: clamp(3.4rem, 15vw, 5.5rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.05; margin: 8px 0 10px; }
+  .auj .auj-gros.mot { font-size: 2.2rem; color: var(--texte-2); }
+  .auj .auj-cpt { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; font-size: 1.15rem; font-weight: 600; }
+  .auj .auj-cpt .cle { margin-right: 6px; }
+  .auj .auj-sous { color: var(--texte-2); font-size: .875rem; margin-top: 8px; }
+  .auj .auj-per { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .auj .auj-per > div { background: var(--carte); border: 1px solid var(--trait); border-radius: 14px; padding: 12px; min-width: 0; }
+  .auj .auj-per .lbl { color: var(--texte-2); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .auj .auj-per .val { font-size: 1.35rem; font-weight: 750; margin: 2px 0; white-space: nowrap; }
+  .auj .auj-per .sous { color: var(--texte-2); font-size: .75rem; line-height: 1.5; }
+  @media (max-width: 640px) { .auj .auj-per { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="haut">
+    <div>
+      <h1>Tableau de bord global</h1>
+      <p class="doux" id="maj">chargement</p>
+    </div>
+    <button class="icone" id="theme" type="button" aria-label="Changer de thème (automatique, sombre, clair)" title="Thème">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
+    </button>
+  </header>
+
+  <div class="bandeau" id="bandeau" hidden></div>
+
+  <!-- 29/10 (Simon : « aujourd'hui on a fait combien » doit sauter aux yeux) : toujours tous les comptes, sans filtre -->
+  <section class="auj" id="auj" aria-label="Aujourd'hui"></section>
+
+  <nav class="filtres" aria-label="Filtres">
+    <div class="chips" id="f-comptes" role="group" aria-label="Compte"></div>
+    <div class="chips" id="f-periode" role="group" aria-label="Période"></div>
+  </nav>
+
+  <main>
+    <section class="chiffres" id="chiffres" aria-label="Chiffres clés"></section>
+
+    <section class="carte" aria-labelledby="t-courbe">
+      <h2 id="t-courbe">Résultat cumulé</h2>
+      <div class="legende" id="legende"></div>
+      <div id="courbe"></div>
+    </section>
+
+    <section class="carte tabcarte" aria-labelledby="t-jours">
+      <h2 id="t-jours">Jour par jour</h2>
+      <p class="doux" style="margin-top:-6px;margin-bottom:8px">Touche une case pour voir le détail.</p>
+      <div class="defile" id="defile"><div class="tab" id="jours" role="table" aria-label="Résultat par jour et par compte"></div></div>
+      <button class="plus" id="plus" type="button" hidden>Voir plus de jours</button>
+    </section>
+  </main>
+
+  <footer class="pied" id="pied"></footer>
+</div>
+
+<!--DONNEES_DEBUT-->
+<script type="application/json" id="donnees">{}</script>
+<!--DONNEES_FIN-->
+
+<script type="text/plain" id="logique">
+/* Calculs purs (pas de page) : testés par test_global.py avec node, comparés à global.py. */
+(function (racine) {
+  'use strict';
+  function somme(v) { var s = 0, ok = false; v.forEach(function (x) { if (x !== null && x !== undefined) { s += x; ok = true; } }); return ok ? s : null; }
+  function arr(x, n) { return x === null || x === undefined ? null : Math.round(x * Math.pow(10, n)) / Math.pow(10, n); }
+
+  /* Les dates visibles : les `periode` derniers jours (0 = tout). */
+  function dates(data, periode) { return periode > 0 ? data.dates.slice(-periode) : data.dates.slice(); }
+
+  /* Même calcul que `totaliser` de global.py, sur des enregistrements déjà jugés « donnés ». */
+  function agreger(recs, seuil) {
+    var t = { jours: recs.length };
+    t.jours_joues = recs.filter(function (r) { return (r.tournois || 0) > 0; }).length;
+    t.sessions = arr(somme(recs.map(function (r) { return r.sessions; })), 0);
+    t.jeu_s = arr(somme(recs.map(function (r) { return r.jeu_s; })), 0);
+    t.tournois = arr(somme(recs.map(function (r) { return r.tournois; })), 0);
+    t.victoires = arr(somme(recs.map(function (r) { return r.victoires; })), 0);
+    t.net_eur = arr(somme(recs.map(function (r) { return r.net_eur; })), 2);
+    t.buyins_eur = arr(somme(recs.map(function (r) { return r.buyins_eur; })), 2);
+    t.cev_total = arr(somme(recs.map(function (r) { return r.cev_total; })), 1);
+    t.cev_connus = recs.reduce(function (a, r) { return a + (r.cev_connus || 0); }, 0);
+    t.approx = recs.some(function (r) { return r.approx; });
+    t.en_cours = recs.some(function (r) { return r.statut === 'en_cours'; });
+    t.heures = t.jeu_s === null ? null : arr(t.jeu_s / 3600, 2);
+    t.roi = (t.buyins_eur !== null && t.net_eur !== null && t.buyins_eur > 0) ? arr(t.net_eur / t.buyins_eur, 4) : null;
+    t.cev_moyen = t.cev_connus ? arr(t.cev_total / t.cev_connus, 1) : null;
+    t.ecart_seuil = t.cev_moyen === null ? null : arr(t.cev_moyen - seuil, 1);
+    t.cev_fiable = t.cev_connus >= 30;
+    t.limites = {};
+    recs.forEach(function (r) { Object.keys(r.limites || {}).forEach(function (k) { t.limites[k] = (t.limites[k] || 0) + r.limites[k]; }); });
+    return t;
+  }
+
+  /* Les enregistrements « donnés » d'un compte (ou du total) sur ces dates. */
+  function donnes(data, ids, cible) {
+    var set = {}; ids.forEach(function (d) { set[d] = true; });
+    return data.jours.filter(function (j) { return set[j.date]; }).map(function (j) {
+      return cible === 'total' ? j.total : j.comptes[cible];
+    }).filter(function (r) { return r && r.donne; });
+  }
+
+  /* Cumul en euros sur les dates visibles : null un jour où le compte n'a pas donné ses chiffres. */
+  function cumul(data, ids, cible) {
+    var par = {}; data.jours.forEach(function (j) { par[j.date] = j; });
+    var c = 0;
+    return ids.map(function (d) {
+      var j = par[d], r = j && (cible === 'total' ? j.total : j.comptes[cible]);
+      if (r && r.donne && r.net_eur !== null) { c = Math.round((c + r.net_eur) * 100) / 100; return c; }
+      return null;
+    });
+  }
+
+  /* Que montrer en haut ? `mode` : 'tous' ou l'id d'un compte. Sans jour commun, la page propose le compte qui a des données. */
+  function modeParDefaut(data) {
+    if (data.comptes.length < 2 || data.totaux.tous.jours > 0) return 'tous';
+    var meilleur = data.comptes[0].id, n = -1;
+    data.comptes.forEach(function (c) { var j = data.totaux.par_compte[c.id].jours; if (j > n) { n = j; meilleur = c.id; } });
+    return meilleur;
+  }
+
+  racine.GlobalLogique = { somme: somme, dates: dates, agreger: agreger, donnes: donnes, cumul: cumul, modeParDefaut: modeParDefaut };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+
+<script type="text/plain" id="ui">
+(function () {
+  'use strict';
+  var L = window.GlobalLogique;
+  var SERIES = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)', 'var(--s6)'];
+  var NS = 'http://www.w3.org/2000/svg';
+  var $ = function (id) { return document.getElementById(id); };
+  var data = null;
+  var etat = { mode: 'tous', periode: 0, ouvert: null, lignes: 14, theme: 'auto' };
+
+  /* ---------- petits outils ---------- */
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      if (k === 'class') el.className = props[k];
+      else if (k === 'text') el.textContent = props[k];
+      else if (k === 'style') el.setAttribute('style', props[k]);
+      else if (props[k] !== null && props[k] !== undefined && props[k] !== false) el.setAttribute(k, props[k] === true ? '' : props[k]);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c === null || c === undefined || c === false) continue;
+      el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+  function vider(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+  function sv(tag, attrs) {
+    var el = document.createElementNS(NS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+  var nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+  var nf1 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  var nf2 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var NB = ' ';
+  function signe(v, s) { return v > 0 ? '+' : (v < 0 ? '-' : ''); }
+  function eur(v, avecSigne) {
+    if (v === null || v === undefined) return 'non mesuré';
+    var r = Math.round(v * 100) / 100;
+    return (avecSigne ? signe(r) : (r < 0 ? '-' : '')) + nf2.format(Math.abs(r)) + NB + '€';
+  }
+  function eurCourt(v) { var r = Math.round(v * 100) / 100; return (r < 0 ? '-' : '') + (Number.isInteger(r) ? nf0.format(Math.abs(r)) : nf2.format(Math.abs(r))) + NB + '€'; }
+  function heures(s) {
+    if (s === null || s === undefined) return 'non mesuré';
+    var m = Math.round(s / 60), hh = Math.floor(m / 60), mm = m % 60;
+    return hh > 0 ? hh + NB + 'h' + NB + (mm < 10 ? '0' : '') + mm : mm + NB + 'min';
+  }
+  function heuresCourt(s) {
+    if (s === null || s === undefined) return 'non mesuré';
+    var m = Math.round(s / 60), hh = Math.floor(m / 60), mm = m % 60;
+    return hh > 0 ? hh + 'h' + (mm < 10 ? '0' : '') + mm : mm + NB + 'min';
+  }
+  function pct(v) { return v === null || v === undefined ? 'non mesuré' : signe(v) + nf1.format(Math.abs(v * 100)) + NB + '%'; }
+  function cev(v) { return v === null || v === undefined ? 'non mesuré' : signe(v) + nf1.format(Math.abs(v)); }
+  function entier(v) { return v === null || v === undefined ? 'non mesuré' : nf0.format(v); }
+  function classeSigne(v) { return v > 0.004 ? 'plus-v' : (v < -0.004 ? 'moins-v' : ''); }
+  function jjmm(d) { return d.slice(8, 10) + '/' + d.slice(5, 7); }
+  function jourLong(d) { return new Date(d + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }); }
+  function horodatage(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + ' à ' + iso.slice(11, 16) : null; }
+  function compte(id) { return data.comptes.filter(function (c) { return c.id === id; })[0]; }
+  function indexCompte(id) { for (var i = 0; i < data.comptes.length; i++) if (data.comptes[i].id === id) return i; return 0; }
+  function nomAff(c) { return c.nom; }
+  function etiquetteExemple() { return h('span', { class: 'tag ex', text: 'exemple' }); }
+  function cleCouleur(i) { return h('span', { class: 'cle', style: 'background:' + SERIES[i % SERIES.length] }); }
+
+  /* ---------- données ---------- */
+  function charger() {
+    return fetch('global.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .catch(function () { return JSON.parse($('donnees').textContent); });
+  }
+
+  function dateVisibles() { return L.dates(data, etat.periode); }
+  function plusieursComptes() { return data.comptes.length > 1; }
+  function modeEffectif() { return plusieursComptes() ? etat.mode : data.comptes[0].id; }
+  function cible() { var m = modeEffectif(); return m === 'tous' ? 'total' : m; }
+  function colonnes() { var m = modeEffectif(); return m === 'tous' ? data.comptes.map(function (c) { return c.id; }) : [m]; }
+
+  /* ---------- en-tête, filtres ---------- */
+  function dessinerEntete() {
+    $('maj').textContent = 'Mis à jour le ' + horodatage(data.maj) + ' · ' + data.comptes.length + (data.comptes.length > 1 ? ' comptes' : ' compte');
+    var b = $('bandeau');
+    vider(b);
+    var msgs = [];
+    data.comptes.forEach(function (c) {
+      if (c.exemple) msgs.push("Les chiffres de " + c.nom + " sont un EXEMPLE inventé : ce ne sont pas de vrais résultats. Ils servent à montrer la page.");
+    });
+    (data.avertissements || []).forEach(function (a) { msgs.push(a); });
+    msgs.forEach(function (m) { b.appendChild(h('p', { text: m })); });
+    b.hidden = msgs.length === 0;
+  }
+
+  function dessinerFiltres() {
+    var fc = vider($('f-comptes'));
+    if (plusieursComptes()) {
+      var mk = function (id, nom, ex, cle) {
+        var bt = h('button', { class: 'chip', type: 'button', 'aria-pressed': String(etat.mode === id) }, cle || null, nom, ex ? etiquetteExemple() : null);
+        bt.addEventListener('click', function () { etat.mode = id; etat.ouvert = null; dessinerTout(); });
+        fc.appendChild(bt);
+      };
+      mk('tous', 'Tous', false, null);
+      data.comptes.forEach(function (c, i) { mk(c.id, c.nom, c.exemple, cleCouleur(i)); });
+    }
+    var fp = vider($('f-periode'));
+    [[7, '7 jours'], [30, '30 jours'], [0, 'Tout']].forEach(function (p) {
+      var bt = h('button', { class: 'chip', type: 'button', 'aria-pressed': String(etat.periode === p[0]), text: p[1] });
+      bt.addEventListener('click', function () { etat.periode = p[0]; etat.ouvert = null; etat.lignes = 14; dessinerTout(); });
+      fp.appendChild(bt);
+    });
+  }
+
+  /* ---------- gros chiffres ---------- */
+  function tuile(lbl, val, sous) {
+    return h('div', { class: 'tuile' }, h('p', { class: 'lbl', text: lbl }), h('p', { class: 'val', text: val }), sous ? h('p', { class: 'sous', text: sous }) : null);
+  }
+
+  function dessinerChiffres() {
+    var box = vider($('chiffres'));
+    var dts = dateVisibles(), mode = modeEffectif(), seuil = data.seuil_cev;
+    var recs = L.donnes(data, dts, cible());
+    var total = L.agreger(recs, seuil);
+    var jours = data.jours.filter(function (j) { return dts.indexOf(j.date) >= 0; });
+    var portee = h('div', { class: 'portee' });
+    if (mode === 'tous') {
+      portee.appendChild(document.createTextNode(plusieursComptes() ? 'Tous les comptes ensemble' : data.comptes[0].nom));
+      data.comptes.forEach(function (c) { if (c.exemple) portee.appendChild(etiquetteExemple()); });
+    } else {
+      var c = compte(mode);
+      portee.appendChild(cleCouleur(indexCompte(mode)));
+      portee.appendChild(document.createTextNode(c.nom));
+      if (c.exemple) portee.appendChild(etiquetteExemple());
+    }
+    var vide = recs.length === 0;
+    var hero = h('div', { class: 'hero' }, h('p', { class: 'doux', text: 'Résultat total' }), portee);
+    var gros = h('p', { class: 'gros ' + (vide ? 'mot' : classeSigne(total.net_eur)), text: vide ? 'en attente' : eur(total.net_eur, true) });
+    hero.insertBefore(gros, null);
+    var partiels = mode === 'tous' ? jours.filter(function (j) { return !j.total.donne; }).length
+      : jours.filter(function (j) { return !j.comptes[mode].donne; }).length;
+    var txt;
+    if (vide) txt = mode === 'tous' ? "Aucun jour où tous les comptes ont donné leurs chiffres." : 'Aucun chiffre reçu sur cette période.';
+    else {
+      txt = total.jours + (total.jours > 1 ? ' jours comptés' : ' jour compté');
+      if (partiels > 0) txt += ' · ' + partiels + (partiels > 1 ? ' jours partiels non comptés' : ' jour partiel non compté');
+      if (total.en_cours) txt += ' · journée en cours';
+      if (total.approx) txt += ' · ≈ quelques tournois non retrouvés';
+    }
+    hero.appendChild(h('p', { class: 'sous', text: txt }));
+    box.appendChild(hero);
+
+    box.appendChild(h('div', { class: 'tuiles' },
+      tuile('Tournois', vide ? 'en attente' : entier(total.tournois), vide || total.victoires === null ? null : entier(total.victoires) + ' victoires'),
+      tuile('Heures de jeu', vide ? 'en attente' : heures(total.jeu_s), vide || total.sessions === null ? null : entier(total.sessions) + (total.sessions > 1 ? ' sessions' : ' session')),
+      tuile('ROI', vide ? 'en attente' : pct(total.roi), vide || total.buyins_eur === null ? null : 'sur ' + eur(total.buyins_eur, false) + ' misés')));
+
+    var lignes = h('div', { class: 'lignes' });
+    if (!vide && total.cev_moyen !== null) {
+      var pos = total.ecart_seuil >= 0;
+      var t = 'cEV par tournoi : ' + cev(total.cev_moyen) + ' jetons (seuil ' + cev(seuil) + ') · ' + (pos ? 'au-dessus du seuil' : 'sous le seuil') + ' de ' + nf1.format(Math.abs(total.ecart_seuil));
+      lignes.appendChild(h('p', { text: t + (total.cev_fiable ? '' : ' · pas assez de tournois pour conclure') }));
+    }
+    if (mode === 'tous' && plusieursComptes()) {
+      var p = h('p');
+      data.comptes.forEach(function (c, i) {
+        var tr = L.agreger(L.donnes(data, dts, c.id), seuil);
+        var attente = tr.jours === 0;
+        p.appendChild(h('span', { class: 'item' }, cleCouleur(i), h('span', { class: 'nom', text: c.nom }),
+          h('span', { class: attente ? '' : classeSigne(tr.net_eur), text: attente ? 'en attente' : eur(tr.net_eur, true) }),
+          h('span', { text: attente ? '' : '(' + tr.jours + (tr.jours > 1 ? ' jours)' : ' jour)') })));
+      });
+      lignes.appendChild(p);
+    }
+    if (mode !== 'tous' && plusieursComptes() && data.totaux.tous.jours === 0) {
+      var sans = data.comptes.filter(function (c) { return data.totaux.par_compte[c.id].jours === 0; }).map(function (c) { return c.nom; });
+      lignes.appendChild(h('p', { text: 'Total de tous les comptes : en attente' + (sans.length ? ' de ' + sans.join(', ') : '') + ". Aucun jour où tous ont donné leurs chiffres." }));
+    }
+    if (lignes.childNodes.length) box.appendChild(lignes);
+  }
+
+  /* ---------- courbe ---------- */
+  function belleEchelle(min, max, n) {
+    var span = max - min || 1, brut = span / n, p = Math.pow(10, Math.floor(Math.log10(brut))), f = brut / p;
+    var pas = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+    var a = Math.floor(min / pas) * pas, b = Math.ceil(max / pas) * pas, out = [];
+    for (var v = a; v <= b + pas / 2; v += pas) out.push(Math.round(v * 1000) / 1000);
+    return out;
+  }
+
+  function seriesVisibles() {
+    var dts = dateVisibles(), mode = modeEffectif(), out = [];
+    if (mode === 'tous') {
+      data.comptes.forEach(function (c, i) { out.push({ id: c.id, nom: c.nom, couleur: SERIES[i % SERIES.length], exemple: c.exemple, pts: L.cumul(data, dts, c.id) }); });
+      if (plusieursComptes()) out.push({ id: 'total', nom: 'Total', couleur: 'var(--texte)', exemple: false, total: true, pts: L.cumul(data, dts, 'total') });
+    } else {
+      var c = compte(mode);
+      out.push({ id: c.id, nom: c.nom, couleur: SERIES[indexCompte(mode) % SERIES.length], exemple: c.exemple, pts: L.cumul(data, dts, c.id) });
+    }
+    return out;
+  }
+  function dernier(pts) { for (var i = pts.length - 1; i >= 0; i--) if (pts[i] !== null) return pts[i]; return null; }
+
+  function dessinerLegende(series) {
+    var lg = vider($('legende'));
+    series.forEach(function (s) {
+      var v = dernier(s.pts);
+      lg.appendChild(h('span', { class: 'li' }, h('span', { class: 'cle', style: 'background:' + s.couleur + (s.total ? ';height:4px' : '') }),
+        h('span', { text: s.nom }), s.exemple ? etiquetteExemple() : null,
+        h('b', { class: v === null ? '' : classeSigne(v), text: v === null ? 'en attente' : eur(v, true) })));
+    });
+  }
+
+  /* axe vertical : repères ronds, zéro toujours dedans, un peu d'air sous le plus bas et au-dessus du plus haut (pas de -200 € pour une perte de 2 €) */
+  function echelleCourbe(lo, hi) {
+    var span = (hi - lo) || 1, e = belleEchelle(lo, hi, 4), pas = e.length > 1 ? e[1] - e[0] : span;
+    var dmin = lo - span * 0.06, dmax = hi + span * 0.08, ticks = [];
+    for (var v = Math.ceil(dmin / pas - 1e-9) * pas; v <= dmax + 1e-9; v += pas) ticks.push(Math.round(v * 1000) / 1000);
+    return { ticks: ticks, dmin: dmin, dmax: dmax };
+  }
+
+  function dessinerCourbe() {
+    var series = seriesVisibles(), dts = dateVisibles();
+    dessinerLegende(series);
+    var box = vider($('courbe'));
+    if (box._hors) { document.removeEventListener('pointerdown', box._hors); box._hors = null; }
+    var vals = [0];
+    series.forEach(function (s) { s.pts.forEach(function (v) { if (v !== null) vals.push(v); }); });
+    if (!dts.length || vals.length < 2) { box.appendChild(h('p', { class: 'vide', text: 'Pas encore de chiffres à tracer.' })); return; }
+    var W = Math.max(280, Math.round(box.clientWidth || 340)), tel = W < 520, H = tel ? 250 : 310;
+    var ech = echelleCourbe(Math.min.apply(null, vals), Math.max.apply(null, vals)), ticks = ech.ticks;
+    var ymin = ech.dmin, ymax = ech.dmax;
+    /* valeur finale écrite au bout de chaque courbe (le nom aussi sur grand écran) */
+    var fins = series.map(function (s) { var v = dernier(s.pts); return v === null ? null : (tel ? '' : s.nom + '  ') + eur(v, true); });
+    var lw = 0; fins.forEach(function (t) { if (t) lw = Math.max(lw, t.length); });
+    var yl = 0; ticks.forEach(function (t) { yl = Math.max(yl, eurCourt(t).length); });
+    var m = { l: Math.round(14 + yl * 6.4), r: Math.round(14 + lw * 7.2), t: 14, b: 34 };
+    var n = dts.length, pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var X = function (i) { return n > 1 ? m.l + pw * i / (n - 1) : m.l + pw / 2; };
+    var Y = function (v) { return m.t + ph * (1 - (v - ymin) / (ymax - ymin)); };
+    var svg = sv('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', tabindex: 0,
+      'aria-label': 'Résultat cumulé en euros : ' + series.map(function (s) { var v = dernier(s.pts); return s.nom + ' ' + (v === null ? 'en attente' : eur(v, true)); }).join(', ') + '. Flèches gauche et droite pour parcourir les jours.' });
+    /* grille : traits fins, zéro net */
+    ticks.forEach(function (t) {
+      if (t === 0) return;
+      svg.appendChild(sv('line', { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), stroke: 'var(--trait)', 'stroke-width': 1 }));
+      var tx = sv('text', { x: m.l - 8, y: Y(t) + 4, 'text-anchor': 'end' }); tx.textContent = eurCourt(t); svg.appendChild(tx);
+    });
+    svg.appendChild(sv('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: 'var(--texte-3)', 'stroke-width': 1.5 }));
+    var t0 = sv('text', { x: m.l - 8, y: Y(0) + 4, 'text-anchor': 'end', class: 'zero' }); t0.textContent = '0' + NB + '€'; svg.appendChild(t0);
+    /* dates jj/mm : une sur k, la dernière toujours écrite, jamais collées */
+    var ecart = n > 1 ? pw / (n - 1) : pw, k = Math.max(1, Math.ceil(46 / ecart));
+    for (var i = n - 1; i >= 0; i -= k) {
+      var xi = X(i);
+      svg.appendChild(sv('line', { x1: xi, x2: xi, y1: H - m.b, y2: H - m.b + 4, stroke: 'var(--texte-3)', 'stroke-width': 1 }));
+      var tl = sv('text', { x: xi, y: H - 10, 'text-anchor': 'middle' });
+      tl.textContent = jjmm(dts[i]); svg.appendChild(tl);
+    }
+    /* courbes : le total par-dessus */
+    var ordre = series.slice().sort(function (a, b) { return (a.total ? 1 : 0) - (b.total ? 1 : 0); });
+    ordre.forEach(function (s) {
+      var d = '', prec = false, seul = [];
+      s.pts.forEach(function (v, i) {
+        if (v === null) { prec = false; return; }
+        d += (prec ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' ';
+        prec = true;
+      });
+      s.pts.forEach(function (v, i) { if (v !== null && (i === 0 || s.pts[i - 1] === null) && (i === n - 1 || s.pts[i + 1] === null)) seul.push(i); });
+      svg.appendChild(sv('path', { d: d, fill: 'none', stroke: s.couleur, 'stroke-width': s.total ? 2.5 : 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+      seul.forEach(function (i) { svg.appendChild(sv('circle', { cx: X(i), cy: Y(s.pts[i]), r: 4, fill: s.couleur, stroke: 'var(--carte)', 'stroke-width': 2 })); });
+    });
+    /* bouts de courbe : point + valeur finale, décalée de 9 px au plus si deux valeurs se touchent, sinon omise (la légende la porte) */
+    var bouts = [];
+    series.forEach(function (s, j) { var kk = s.pts.length - 1; while (kk >= 0 && s.pts[kk] === null) kk--; if (kk >= 0) bouts.push({ s: s, i: kk, y: Y(s.pts[kk]), txt: fins[j] }); });
+    bouts.forEach(function (b) { svg.appendChild(sv('circle', { cx: X(b.i), cy: b.y, r: 5, fill: b.s.couleur, stroke: 'var(--carte)', 'stroke-width': 2 })); });
+    var dernierY = -1e9;
+    bouts.slice().sort(function (a, b) { return a.y - b.y; }).forEach(function (b) {
+      var y = b.y, pousse = dernierY + 15 - y;
+      if (pousse > 0) { if (pousse > 9) return; y += pousse; }
+      dernierY = y;
+      var tx = sv('text', { x: X(b.i) + 11, y: y + 4, class: 'fin' }); tx.textContent = b.txt; svg.appendChild(tx);
+    });
+    /* survol / toucher : trait vertical + un point par courbe */
+    var cross = sv('line', { y1: m.t, y2: H - m.b, stroke: 'var(--texte-3)', 'stroke-width': 1, visibility: 'hidden' });
+    svg.appendChild(cross);
+    var pts = series.map(function (s) { var c = sv('circle', { r: 4.5, fill: s.couleur, stroke: 'var(--carte)', 'stroke-width': 2, visibility: 'hidden' }); svg.appendChild(c); return c; });
+    var sur = sv('rect', { x: m.l - 12, y: 0, width: pw + 24, height: H, fill: 'transparent' });
+    svg.appendChild(sur);
+    box.appendChild(svg);
+    var tip = h('div', { class: 'tip', hidden: true });
+    box.appendChild(tip);
+    var actuel = -1;
+    function aller(i) {
+      i = Math.max(0, Math.min(n - 1, i)); actuel = i;
+      var r = svg.getBoundingClientRect(), echelle = r.width / W;
+      cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i)); cross.setAttribute('visibility', 'visible');
+      series.forEach(function (s, j) {
+        var v = s.pts[i];
+        if (v === null) pts[j].setAttribute('visibility', 'hidden');
+        else { pts[j].setAttribute('cx', X(i)); pts[j].setAttribute('cy', Y(v)); pts[j].setAttribute('visibility', 'visible'); }
+      });
+      vider(tip);
+      tip.appendChild(h('p', { class: 'date', text: jourLong(dts[i]) }));
+      series.forEach(function (s) {
+        var v = s.pts[i];
+        tip.appendChild(h('p', { class: 'r' }, h('span', { class: 'cle', style: 'background:' + s.couleur }), h('span', { text: s.nom }),
+          h('b', { text: v === null ? 'en attente' : eur(v, true) })));
+      });
+      tip.hidden = false;
+      /* la bulle se pose là où elle cache le moins de courbe, sans jamais couvrir le trait ni ses points ; sinon au-dessus du graphique */
+      var tw = tip.offsetWidth / echelle, th = tip.offsetHeight / echelle, xc = X(i), meilleur = null;
+      [[xc + 14, m.t, 0], [xc - 14 - tw, m.t, 0], [xc + 14, H - m.b - th - 4, 0], [xc - 14 - tw, H - m.b - th - 4, 0], [xc + 14, (H - th) / 2, 0], [xc - 14 - tw, (H - th) / 2, 0], [xc - tw / 2, -th - 6, 6]].forEach(function (c) {
+        var x0 = Math.max(0, Math.min(W - tw, c[2] ? c[0] : Math.max(m.l - 4, c[0]))), y0 = c[1], coute = c[2];
+        if (!c[2] && xc > x0 - 8 && xc < x0 + tw + 8) coute += 40;
+        if (!c[2]) series.forEach(function (s) {
+          for (var q = 0; q < n - 1; q++) {
+            if (s.pts[q] === null || s.pts[q + 1] === null) continue;
+            for (var u = 0; u <= 10; u++) {
+              var px = X(q) + (X(q + 1) - X(q)) * u / 10, py = Y(s.pts[q] + (s.pts[q + 1] - s.pts[q]) * u / 10);
+              if (px > x0 - 4 && px < x0 + tw + 4 && py > y0 - 4 && py < y0 + th + 4) coute++;
+            }
+          }
+        });
+        if (meilleur === null || coute < meilleur.coute) meilleur = { x: x0, y: y0, coute: coute };
+      });
+      tip.style.left = meilleur.x * echelle + 'px';
+      tip.style.top = meilleur.y * echelle + 'px';
+    }
+    function montrer(ev) {
+      var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+      aller(n > 1 ? Math.round((px - m.l) / pw * (n - 1)) : 0);
+    }
+    function cacher() {
+      actuel = -1; cross.setAttribute('visibility', 'hidden'); tip.hidden = true;
+      pts.forEach(function (c) { c.setAttribute('visibility', 'hidden'); });
+    }
+    sur.addEventListener('pointermove', montrer);
+    sur.addEventListener('pointerdown', montrer);
+    sur.addEventListener('pointerleave', function (ev) { if (ev.pointerType === 'mouse') cacher(); });
+    svg.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowLeft') { aller(actuel < 0 ? n - 1 : actuel - 1); ev.preventDefault(); }
+      else if (ev.key === 'ArrowRight') { aller(actuel < 0 ? n - 1 : actuel + 1); ev.preventDefault(); }
+      else if (ev.key === 'Home') { aller(0); ev.preventDefault(); }
+      else if (ev.key === 'End') { aller(n - 1); ev.preventDefault(); }
+    });
+    svg.addEventListener('blur', cacher);
+    /* au doigt, un toucher ailleurs referme la bulle */
+    box._hors = function (ev) { if (!box.contains(ev.target)) cacher(); };
+    document.addEventListener('pointerdown', box._hors);
+  }
+
+  /* ---------- tableau jour par jour ---------- */
+  var MOTS = { attente: 'en attente', repos: 'repos', sans_resultat: 'résultats en attente', incomplet: 'à confirmer', en_cours: 'en cours', complet: 'complet' };
+
+  function celluleContenu(r, estTotal) {
+    var el;
+    if (estTotal && !r.donne) {
+      var qui = r.manque.map(function (id) { return compte(id).nom; }).join(', ');
+      return { classe: 'cel etat attente', noeuds: [h('span', { class: 'mot', text: 'partiel' }), h('span', { class: 'mini', text: 'manque ' + qui })] };
+    }
+    if (r.statut === 'attente') return { classe: 'cel etat attente', noeuds: [h('span', { class: 'mot', text: 'en attente' })] };
+    if (r.statut === 'repos') return { classe: 'cel etat', noeuds: [h('span', { class: 'mot', text: 'repos' })] };
+    if (r.statut === 'sans_resultat') {
+      return { classe: 'cel etat', noeuds: [h('span', { class: 'mot', text: 'résultats en attente' }),
+        h('span', { class: 'mini', text: (r.jeu_s === null ? '' : heuresCourt(r.jeu_s)) + (r.sessions ? ' · ' + r.sessions + ' sess.' : '') })] };
+    }
+    var net = h('span', { class: 'net ' + classeSigne(r.net_eur) }, r.net_eur === null ? 'non mesuré' : eur(r.net_eur, true),
+      r.approx ? h('span', { class: 'tilde', text: '≈', title: r.manquants ? r.manquants + ' tournois non retrouvés' : 'quelques tournois non retrouvés' }) : null);
+    var pt = (r.tournois === null ? '' : r.tournois + ' t') + (r.jeu_s === null ? '' : ' · ' + heuresCourt(r.jeu_s));
+    var noeuds = [net, h('span', { class: 'pt', text: pt })];
+    if (r.statut === 'en_cours') noeuds.push(h('span', { class: 'mini', text: 'en cours' }));
+    if (r.statut === 'incomplet') noeuds.push(h('span', { class: 'mini', text: 'à confirmer' }));
+    return { classe: 'cel', noeuds: noeuds };
+  }
+
+  function fait(lbl, val, sous) {
+    return h('div', {}, h('dt', { text: lbl }), h('dd', {}, val, sous ? h('small', { text: sous }) : null));
+  }
+
+  function panneauCompte(j, c, r) {
+    var p = h('div', { class: 'panneau' });
+    p.appendChild(h('h3', {}, c.nom + ' · ' + jourLong(j.date), c.exemple ? etiquetteExemple() : null, h('span', { class: 'tag', text: MOTS[r.statut] })));
+    if (r.statut === 'attente') {
+      p.appendChild(h('p', { class: 'note', text: "Pas encore de chiffres de " + c.nom + " pour ce jour. Rien n'est compté à la place : ni 0, ni estimation." + (c.maj ? ' Dernier envoi : ' + horodatage(c.maj) + '.' : ' Aucun envoi reçu pour le moment.') }));
+      return p;
+    }
+    if (r.statut === 'repos') { p.appendChild(h('p', { class: 'note', text: "Aucune table jouée ce jour-là (écrit par le compte). C'est un vrai zéro, compté dans les totaux." })); return p; }
+    var f = h('dl', { class: 'faits' });
+    if (r.statut !== 'sans_resultat') {
+      f.appendChild(fait('Résultat', h('span', { class: classeSigne(r.net_eur), text: eur(r.net_eur, true) })));
+      f.appendChild(fait('Tournois', entier(r.tournois), r.victoires === null ? null : r.victoires + ' victoires'));
+    }
+    f.appendChild(fait('Heures de jeu', heures(r.jeu_s), r.sessions === null ? null : r.sessions + (r.sessions > 1 ? ' sessions' : ' session')));
+    if (r.statut !== 'sans_resultat') {
+      f.appendChild(fait('ROI', pct(r.roi), r.buyins_eur === null ? null : 'sur ' + eur(r.buyins_eur, false)));
+      f.appendChild(fait('cEV par tournoi', r.cev_moyen === null ? 'non mesuré' : cev(r.cev_moyen) + ' jetons',
+        r.cev_moyen === null ? null : 'seuil ' + cev(data.seuil_cev) + ' · ' + (r.ecart_seuil >= 0 ? 'au-dessus' : 'sous le seuil') + (r.cev_fiable ? '' : ' · peu de tournois')));
+      var lim = Object.keys(r.limites || {}).sort(function (a, b) { return parseFloat(a) - parseFloat(b); }).map(function (k) { return eurCourt(parseFloat(k)) + ' (' + r.limites[k] + ')'; });
+      f.appendChild(fait('Limite jouée', lim.length ? lim.join(' · ') : 'non mesuré'));
+    }
+    f.appendChild(fait('Bankroll', r.bankroll_eur === null ? 'non mesuré' : eur(r.bankroll_eur, false), r.bankroll_eur === null || !c.bankroll || !c.bankroll.vu ? null : 'lue à ' + c.bankroll.vu.slice(11, 16)));
+    p.appendChild(f);
+    if (r.detail && r.detail.length) {
+      p.appendChild(h('h4', { text: 'Sessions' }));
+      var ul = h('ul', { class: 'sess' });
+      r.detail.forEach(function (s) {
+        var li = h('li', {}, h('span', { text: (s.debut || '?') + ' à ' + (s.fin || 'en cours') + ' · ' + heures(s.jeu_s) }),
+          h('span', { text: s.tournois === null ? 'non mesuré' : s.tournois + ' t' }),
+          h('b', { class: classeSigne(s.net_eur), text: s.net_eur === null ? '' : eur(s.net_eur, true) }));
+        var sub = [];
+        if (s.cev_moyen !== null) sub.push('cEV ' + cev(s.cev_moyen));
+        if (s.limite !== null) sub.push('limite ' + eurCourt(s.limite));
+        if (s.interrompue) sub.push('interrompue');
+        if (s.mesure === 'partiel' || s.mesure === 'non_mesure') sub.push('tournois non retrouvés');
+        if (sub.length) li.appendChild(h('span', { class: 'sub', text: sub.join(' · '), title: s.raison || null }));
+        ul.appendChild(li);
+      });
+      p.appendChild(ul);
+    } else if (r.detail === null && r.statut !== 'sans_resultat') {
+      p.appendChild(h('p', { class: 'note', text: 'Détail des sessions non gardé pour un jour aussi ancien.' }));
+    }
+    if (r.approx) p.appendChild(h('p', { class: 'note', text: '≈ ' + r.manquants + ' tournoi' + (r.manquants > 1 ? 's' : '') + " joué" + (r.manquants > 1 ? 's' : '') + " mais non retrouvé" + (r.manquants > 1 ? 's' : '') + " dans les données : le résultat peut encore bouger." }));
+    if (r.statut === 'sans_resultat') p.appendChild(h('p', { class: 'note', text: "Heures et sessions reçues, résultats pas encore reçus. Ce jour n'est pas compté dans les totaux." }));
+    if (r.statut === 'incomplet') p.appendChild(h('p', { class: 'note', text: "Le dernier envoi date d'avant la fin de la journée. Ce jour n'est pas compté dans les totaux tant qu'il n'est pas confirmé." }));
+    if (r.statut === 'en_cours') p.appendChild(h('p', { class: 'note', text: 'Journée en cours : les chiffres bougent encore. La journée change à 6 h.' }));
+    return p;
+  }
+
+  function panneauTotal(j) {
+    var t = j.total, p = h('div', { class: 'panneau' });
+    p.appendChild(h('h3', {}, 'Total · ' + jourLong(j.date), h('span', { class: 'tag', text: t.donne ? MOTS[t.statut] : 'partiel' })));
+    var ul = h('ul', { class: 'sess' });
+    data.comptes.forEach(function (c, i) {
+      var r = j.comptes[c.id];
+      ul.appendChild(h('li', {}, h('span', {}, cleCouleur(i), ' ' + c.nom), h('span', { text: r.donne ? '' : MOTS[r.statut] }),
+        h('b', { class: r.donne ? classeSigne(r.net_eur) : '', text: r.donne && r.net_eur !== null ? eur(r.net_eur, true) : '' })));
+    });
+    p.appendChild(ul);
+    if (!t.donne) p.appendChild(h('p', { class: 'note', text: "Total « partiel » : il ne compte que les jours où tous les comptes ont donné leurs chiffres. Les chiffres déjà reçus restent visibles compte par compte." }));
+    else {
+      var f = h('dl', { class: 'faits' });
+      f.appendChild(fait('Résultat', h('span', { class: classeSigne(t.net_eur), text: eur(t.net_eur, true) })));
+      f.appendChild(fait('Tournois', entier(t.tournois)));
+      f.appendChild(fait('Heures de jeu', heures(t.jeu_s)));
+      f.appendChild(fait('ROI', pct(t.roi)));
+      p.appendChild(f);
+    }
+    return p;
+  }
+
+  function dessinerJours() {
+    var box = vider($('jours')), dts = dateVisibles().slice().reverse();
+    var cols = colonnes(), avecTotal = modeEffectif() === 'tous' && plusieursComptes();
+    var nb = cols.length + (avecTotal ? 1 : 0);
+    var grille = '4rem repeat(' + nb + ', minmax(5rem, 11rem))';
+    var larg = $('defile').clientWidth;
+    box.style.setProperty('--larg', Math.max(240, larg - 8) + 'px');
+    if (!dts.length) { box.appendChild(h('p', { class: 'vide', text: 'Aucun jour pour le moment.' })); $('plus').hidden = true; return; }
+    var tete = h('div', { class: 'lig tete', role: 'row', style: 'grid-template-columns:' + grille }, h('div', { role: 'columnheader', text: 'Jour' }));
+    cols.forEach(function (id) {
+      var c = compte(id);
+      tete.appendChild(h('div', { role: 'columnheader' }, cleCouleur(indexCompte(id)), c.nom, c.exemple ? etiquetteExemple() : null));
+    });
+    if (avecTotal) tete.appendChild(h('div', { role: 'columnheader', class: 'col-total' }, h('span', { class: 'cle', style: 'background:var(--texte)' }), 'Total'));
+    box.appendChild(tete);
+    var montre = dts.slice(0, etat.lignes);
+    montre.forEach(function (d) {
+      var j = data.jours.filter(function (x) { return x.date === d; })[0];
+      var ligne = h('div', { class: 'lig', role: 'row', style: 'grid-template-columns:' + grille },
+        h('div', { class: 'jr', role: 'rowheader' }, h('span', { class: 'sem', text: j.jour_semaine }), h('span', { class: 'dt', text: jjmm(d) }),
+          d === data.jour_courant ? h('span', { class: 'auj', text: "aujourd'hui" }) : null));
+      var ajouter = function (cle, rec, estTotal, classeCol, nomCol) {
+        var cc = celluleContenu(rec, estTotal);
+        var ouvert = etat.ouvert && etat.ouvert.date === d && etat.ouvert.cle === cle;
+        var bt = h.apply(null, ['button', { class: cc.classe, type: 'button', 'aria-expanded': String(!!ouvert),
+          'aria-label': nomCol + ', ' + jourLong(d) }].concat(cc.noeuds));
+        bt.addEventListener('click', function () {
+          etat.ouvert = ouvert ? null : { date: d, cle: cle };
+          dessinerJours();
+        });
+        ligne.appendChild(h('div', { role: 'cell', class: classeCol || '' }, bt));
+      };
+      cols.forEach(function (id) { ajouter(id, j.comptes[id], false, '', compte(id).nom); });
+      if (avecTotal) ajouter('total', j.total, true, 'col-total', 'Total');
+      box.appendChild(ligne);
+      if (etat.ouvert && etat.ouvert.date === d) {
+        var pan = etat.ouvert.cle === 'total' ? panneauTotal(j) : panneauCompte(j, compte(etat.ouvert.cle), j.comptes[etat.ouvert.cle]);
+        box.appendChild(h('div', { class: 'lig detail', role: 'row' }, h('div', { role: 'cell' }, pan)));
+      }
+    });
+    $('plus').hidden = dts.length <= etat.lignes;
+  }
+
+  /* ---------- pied de page ---------- */
+  function dessinerPied() {
+    var p0 = vider($('pied'));
+    // 30/10 : aide et derniers envois repliés (demande de Simon : « on s'en fout, tout en bas »)
+    var p = h('details', { class: 'aide' }, h('summary', { text: 'Aide · derniers envois' }));
+    p0.appendChild(p);
+    p.appendChild(h('h2', { text: 'Comment lire' }));
+    p.appendChild(h('ul', {},
+      h('li', { text: '« en attente » : le compte n\'a pas encore envoyé ses chiffres. Ce n\'est jamais compté comme 0.' }),
+      h('li', { text: 'Le total « tous comptes » ne compte que les jours où tous les comptes ont donné leurs chiffres. Sinon : « partiel ».' }),
+      h('li', { text: '« ≈ » : quelques tournois joués n\'ont pas été retrouvés, le résultat peut bouger. « en cours » : la journée n\'est pas finie (elle change à 6 h).' }),
+      h('li', { text: 'cEV : jetons gagnés en moyenne par tournoi, une fois les tapis neutralisés. Le seuil de référence est +' + nf1.format(data.seuil_cev) + '.' })));
+    p.appendChild(h('h2', { text: 'Derniers envois' }));
+    var ul = h('ul');
+    data.comptes.forEach(function (c) {
+      ul.appendChild(h('li', { text: c.nom + (c.exemple ? ' (exemple)' : '') + ' : ' + (c.maj ? horodatage(c.maj) : 'rien reçu') + (c.bankroll ? ' · bankroll ' + eur(c.bankroll.eur, false) : '') }));
+    });
+    p.appendChild(ul);
+  }
+
+  // 29/10 : en-tête « Aujourd'hui » (tous les comptes) + hier, ce mois, l'année, depuis le début. Jour partiel jamais compté 0.
+  function dessinerAujourdhui() {
+    var box = vider($('auj')), jc = data.jour_courant, j = data.jours.filter(function (x) { return x.date === jc; })[0];
+    var T = j ? j.total : null;
+    var hero = h('div', { class: 'auj-hero' }, h('p', { class: 'auj-t', text: "Aujourd'hui · " + (j ? j.jour_semaine + ' ' : '') + jjmm(jc) }));
+    var ok = T && T.donne;
+    hero.appendChild(h('p', { class: 'auj-gros ' + (ok ? classeSigne(T.net_eur) : 'mot'), text: ok ? eur(T.net_eur, true) : (T && T.manque && T.manque.length ? 'partiel' : 'pas encore joué') }));
+    var cpt = h('div', { class: 'auj-cpt' });
+    data.comptes.forEach(function (c, i) {
+      var r = j && j.comptes[c.id];
+      cpt.appendChild(h('span', {}, cleCouleur(i), document.createTextNode(c.nom + ' '),
+        h('b', { class: r && r.net_eur !== null && r.net_eur !== undefined ? classeSigne(r.net_eur) : '', text: r && r.net_eur !== null && r.net_eur !== undefined ? eur(r.net_eur, true) : 'en attente' })));
+    });
+    hero.appendChild(cpt);
+    if (ok) hero.appendChild(h('p', { class: 'auj-sous', text: entier(T.tournois) + ' tournois · ' + heures(T.jeu_s) + ' de jeu' + (T.statut === 'en_cours' ? ' · en cours' : '') }));
+    else if (T && T.manque && T.manque.length) hero.appendChild(h('p', { class: 'auj-sous', text: 'manque ' + T.manque.map(function (id) { var c = compte(id); return c ? c.nom : id; }).join(', ') }));
+    box.appendChild(hero);
+    var t0 = new Date(jc + 'T12:00:00Z'); t0.setUTCDate(t0.getUTCDate() - 1);
+    var hier = t0.toISOString().slice(0, 10);
+    var MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    var per = [['Hier', function (d) { return d === hier; }], [MOIS[+jc.slice(5, 7) - 1], function (d) { return d.slice(0, 7) === jc.slice(0, 7); }],
+      ['Année ' + jc.slice(0, 4), function (d) { return d.slice(0, 4) === jc.slice(0, 4); }], ['Depuis le début', function () { return true; }]];
+    var grille = h('div', { class: 'auj-per' });
+    per.forEach(function (p) {
+      var js = data.jours.filter(function (x) { return p[1](x.date); }), n = 0, partiel = false, pc = {};
+      js.forEach(function (x) {
+        if (x.total.donne) n += x.total.net_eur || 0; else partiel = true;
+        data.comptes.forEach(function (c) { var r = x.comptes[c.id]; if (r && r.net_eur !== null && r.net_eur !== undefined) pc[c.id] = (pc[c.id] || 0) + r.net_eur; });
+      });
+      var sous = h('p', { class: 'sous' });
+      data.comptes.forEach(function (c, i) {
+        if (i) sous.appendChild(h('br'));
+        sous.appendChild(document.createTextNode(c.nom + ' '));
+        sous.appendChild(h('b', { class: pc[c.id] !== undefined ? classeSigne(pc[c.id]) : '', text: pc[c.id] !== undefined ? eur(Math.round(pc[c.id] * 100) / 100, true) : '-' }));
+      });
+      grille.appendChild(h('div', {}, h('p', { class: 'lbl', text: p[0] }),
+        h('p', { class: 'val ' + (js.length ? classeSigne(n) : ''), text: js.length ? eur(Math.round(n * 100) / 100, true) + (partiel ? ' ≈' : '') : '-' }),
+        js.length ? sous : h('p', { class: 'sous', text: 'pas joué' })));
+    });
+    box.appendChild(grille);
+  }
+
+  function dessinerTout() {
+    dessinerEntete(); dessinerAujourdhui(); dessinerFiltres(); dessinerChiffres(); dessinerCourbe(); dessinerJours(); dessinerPied();
+  }
+
+  /* ---------- thème ---------- */
+  function appliquerTheme() {
+    if (etat.theme === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', etat.theme);
+  }
+  function lireTheme() {
+    var param = /[?&]theme=(dark|light)/.exec(location.search);
+    if (param) return param[1];
+    try { var t = localStorage.getItem('global_theme'); if (t === 'dark' || t === 'light') return t; } catch (e) { /* page sans stockage */ }
+    return 'auto';
+  }
+  $('theme').addEventListener('click', function () {
+    etat.theme = etat.theme === 'auto' ? 'dark' : (etat.theme === 'dark' ? 'light' : 'auto');
+    try { if (etat.theme === 'auto') localStorage.removeItem('global_theme'); else localStorage.setItem('global_theme', etat.theme); } catch (e) { /* ignoré */ }
+    appliquerTheme();
+    dessinerCourbe();
+  });
+  $('plus').addEventListener('click', function () { etat.lignes += 14; dessinerJours(); });
+
+  var minuteur = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(function () { if (data) { dessinerCourbe(); dessinerJours(); } }, 120);
+  });
+
+  etat.theme = lireTheme();
+  appliquerTheme();
+  charger().then(function (d) {
+    data = d;
+    if (!data || !data.comptes || !data.comptes.length) { $('maj').textContent = 'Aucune donnée'; return; }
+    etat.mode = L.modeParDefaut(data);
+    var q = /[?&]compte=([a-z0-9_]+)/.exec(location.search);
+    if (q && compte(q[1])) etat.mode = q[1];
+    var pq = /[?&]jours=(\d+)/.exec(location.search);
+    if (pq) etat.periode = parseInt(pq[1], 10);
+    var ou = /[?&]ouvrir=(\d{4}-\d{2}-\d{2}),([a-z0-9_]+)/.exec(location.search);
+    if (ou) etat.ouvert = { date: ou[1], cle: ou[2] };
+    dessinerTout();
+    document.documentElement.setAttribute('data-pret', '1');
+  }).catch(function (e) { $('maj').textContent = 'Erreur de lecture des données : ' + e.message; });
+})();
+</script>
+<!-- 27/10 : LIEN FIXE. Les données arrivent chiffrées (data.enc, branche « donnees ») ; la clé est après le # du lien. -->
+<style>
+  .lf-direct { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 0 0 16px; }
+  .lf-carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 14px 16px; min-width: 0; }
+  .lf-carte h2 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+  .lf-pastille { width: 10px; height: 10px; border-radius: 50%; background: var(--texte-3); flex: none; }
+  .lf-vert .lf-pastille { background: var(--gain); } .lf-rouge .lf-pastille { background: var(--perte); }
+  .lf-bleu .lf-pastille { background: var(--info); }
+  .lf-etat { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--texte-2); white-space: nowrap; }
+  .lf-texte { margin-top: 6px; font-size: .88rem; color: var(--texte-2); }
+  .lf-chiffres { display: flex; gap: 18px; margin-top: 10px; flex-wrap: wrap; }
+  .lf-chiffres div { display: flex; flex-direction: column; gap: 2px; }
+  .lf-courbe { margin-top: 10px; } .lf-courbe small { font-size: .72rem; color: var(--texte-3); }
+  .lf-chiffres small { font-size: .72rem; color: var(--texte-3); text-transform: uppercase; letter-spacing: .04em; }
+  .lf-chiffres b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .lf-gain { color: var(--gain); } .lf-perte { color: var(--perte); }
+  .lf-bas { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .lf-bouton { display: inline-block; padding: 8px 12px; border-radius: 10px; background: var(--teinte); border: 1px solid var(--trait-fort);
+    color: var(--texte); font-weight: 700; font-size: .88rem; text-decoration: none; }
+  .lf-vu { font-size: .78rem; color: var(--texte-3); }
+  .lf-msg { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--alerte-fond); border: 1px solid var(--alerte-trait); }
+</style>
+<script>
+(function () {
+  "use strict";
+  const DONNEES = "https://raw.githubusercontent.com/colfersimon/tableau/donnees/data.enc";
+  const RX = /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/;
+  const NOMS = { simon: "Simon", mathieu: "Mathieu" };
+  const page = document.querySelector(".page");
+  const zone = document.createElement("section");
+  zone.className = "lf-direct"; zone.setAttribute("aria-label", "En direct");
+  const haut = document.querySelector("header.haut");
+  haut.after(zone);
+  let derniers = null, adressesNtfy = {}, globalVu = null;
+
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  function cleDuLien() {
+    const h = location.hash.replace(/^#/, "").replace(/-/g, "+").replace(/_/g, "/");
+    try { const k = b64(h + "===".slice((h.length + 3) % 4)); return k.length === 64 ? k : null; } catch (e) { return null; }
+  }
+  function message(t) { zone.innerHTML = "<div class='lf-msg'>" + t + "</div>"; zone.style.display = "block"; }
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const eur = x => x == null ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(2).replace(".", ",").replace(",00", "") + " €";
+  const classe = x => x > 0 ? "lf-gain" : x < 0 ? "lf-perte" : "";
+  const hm = iso => iso ? String(iso).slice(11, 16) : "?";
+
+  async function dechiffrer(cle, texte) {
+    const d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    const kMac = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    const kAes = await crypto.subtle.importKey("raw", cle.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, kAes, ct)));
+  }
+
+  async function adresseNtfy(sujet) {           // la dernière adresse publiée par ce Mac (plus fraîche que les données)
+    try {
+      const r = await fetch("https://ntfy.sh/" + sujet + "/json?poll=1&since=24h", { cache: "no-store" });
+      let a = null;
+      for (const l of (await r.text()).split("\n")) {
+        try { const m = JSON.parse(l), u = (m.click || (String(m.message || "").match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/) || [])[0] || "").replace(/\/$/, "");
+          if (RX.test(u)) a = u; } catch (e) { /* ligne vide */ }
+      }
+      return a;
+    } catch (e) { return null; }
+  }
+
+  // 27/10 soir : courbe de la session en petit, visible tout de suite sur chaque carte
+  function courbe(c) {
+    const v = [0].concat(c.map(p => Number(p[1]) || 0)), lo = Math.min(0, ...v), hi = Math.max(0, ...v), e = (hi - lo) || 1;
+    const X = i => (i * 300 / (v.length - 1)).toFixed(1), Y = y => (6 + (hi - y) * 58 / e).toFixed(1);
+    const fin = v[v.length - 1], coul = fin >= 0 ? "#2fbf71" : "#e5484d";
+    return "<div class='lf-courbe'><small>Courbe de la session · " + (c[0][0] || "") + " → " + (c[c.length - 1][0] || "") + "</small>" +
+      "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:70px;display:block'>" +
+      "<line x1='0' x2='300' y1='" + Y(0) + "' y2='" + Y(0) + "' stroke='#888' stroke-width='1' stroke-dasharray='3 3' vector-effect='non-scaling-stroke'/>" +
+      "<polyline fill='none' stroke='" + coul + "' stroke-width='2' vector-effect='non-scaling-stroke' points='" +
+      v.map((y, i) => X(i) + "," + Y(y)).join(" ") + "'/></svg></div>";
+  }
+
+  function carte(id, x, adresse) {
+    const nom = NOMS[id] || id, k = document.createElement("div");
+    let coul = "lf-gris", etat = "pas de nouvelles";
+    if (x) {
+      if (x.stop) { etat = "STOP"; }
+      else if (x.etat === "EN_SESSION") { coul = x.arme === false ? "lf-rouge" : "lf-vert"; etat = x.arme === false ? "PAS ARMÉ" : "EN JEU"; }
+      else if (x.etat === "PAUSE") { coul = "lf-bleu"; etat = "PAUSE"; }
+      else if (x.etat === "FIN_DE_CRENEAU") { coul = "lf-vert"; etat = "FINIT SES TABLES"; }
+      else etat = "ARRÊTÉ";
+    } else coul = "lf-rouge";
+    k.className = "lf-carte " + coul;
+    const se = (x && x.session) || {}, jo = (x && x.jour) || {};
+    k.innerHTML = "<h2><i class='lf-pastille'></i>" + esc(nom) + "<span class='lf-etat'>" + esc(etat) + "</span></h2>" +
+      "<div class='lf-texte'>" + (x ? esc(x.texte || x.statut || "") : "Mac éteint ou injoignable : derniers chiffres plus bas.") + "</div>" +
+      (x ? "<div class='lf-chiffres'>" +
+        (se.active ? "<div><small>Session</small><b class='" + classe(se.net_eur) + "'>" + eur(se.net_eur) + "</b><span class='lf-vu'>" + (se.tournois || 0) + " tournois</span></div>" : "") +
+        "<div><small>Aujourd'hui</small><b class='" + classe(jo.net_eur) + "'>" + eur(jo.net_eur) + "</b><span class='lf-vu'>" + (jo.tournois || 0) + " tournois</span></div>" +
+        (x.mise != null ? "<div><small>Mise</small><b>" + String(x.mise).replace(".", ",") + " €</b>" + (x.bankroll != null ? "<span class='lf-vu'>bankroll " + Math.round(x.bankroll) + " €</span>" : "") + "</div>" : "") +
+        "</div>" : "") +
+      (x && x.courbe && x.courbe.length > 1 ? courbe(x.courbe) : "") +
+      "<div class='lf-bas'>" + (adresse ? "<a class='lf-bouton' target='_blank' rel='noopener' href='" + adresse + "/#direct'>Tableau en direct ↗</a>" : "") +
+      "<span class='lf-vu'>" + (x ? "chiffres de " + hm(x.maj) : "") + (adresse ? " · le bouton marche si son Mac est allumé" : "") + "</span></div>";
+    return k;
+  }
+
+  function afficherDirect() {
+    if (!derniers) return;
+    zone.innerHTML = "";
+    for (const id of Object.keys(derniers.sujets || NOMS)) {
+      const a = adressesNtfy[id] || (derniers.adresses || {})[id] || null;
+      zone.append(carte(id, (derniers.direct || {})[id], a));
+    }
+  }
+
+  function lancerPage(g) {
+    document.getElementById("donnees").textContent = JSON.stringify(g);
+    for (const nom of ["logique", "ui"]) {
+      const s = document.createElement("script");
+      s.textContent = document.getElementById(nom).textContent;
+      document.body.append(s);
+    }
+  }
+
+  async function charger(premier) {
+    const cle = cleDuLien();
+    if (!cle) { message("Lien incomplet : il manque la fin du lien (après le #). Reprends le lien complet."); return; }
+    let d;
+    try {
+      const r = await fetch(DONNEES + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      d = await dechiffrer(cle, await r.text());
+    } catch (e) {
+      if (premier) message(String(e.message) === "clé fausse" ? "Lien faux : la clé ne correspond pas." : "Données pas encore disponibles (" + esc(e.message) + "). Réessaie dans 2 min.");
+      return;
+    }
+    derniers = d;
+    if (premier) { globalVu = d.global_ && d.global_.maj; lancerPage(d.global_); }
+    else if (d.global_ && d.global_.maj !== globalVu && !document.hidden) { location.reload(); return; }
+    afficherDirect();
+    for (const [id, sujet] of Object.entries(d.sujets || {})) {
+      adresseNtfy(sujet).then(a => { if (a) { adressesNtfy[id] = a; afficherDirect(); } });
+    }
+  }
+  charger(true);
+  setInterval(() => charger(false), 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) charger(false); });
+})();
+</script>
+
+</body>
+</html>

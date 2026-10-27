@@ -1,0 +1,2119 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Simulateur Twister</title>
+<style>
+:root{
+  --bg:#f7f6f2; --card:#ffffff; --ink:#1d1d1b; --mute:#6b6a64; --line:#e3e1da;
+  --accent:#2f5bd3; --good:#1f8a4c; --bad:#c0392b; --warn:#b7791f; --soft:#eef2fc;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141413; --card:#1e1e1c; --ink:#ecebe6; --mute:#a3a29b; --line:#33322e;
+    --accent:#7d9cf0; --good:#4cc47f; --bad:#f07466; --warn:#e2b04a; --soft:#22283a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141413; --card:#1e1e1c; --ink:#ecebe6; --mute:#a3a29b; --line:#33322e;
+  --accent:#7d9cf0; --good:#4cc47f; --bad:#f07466; --warn:#e2b04a; --soft:#22283a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding-block:16px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+main>*{min-width:0}
+h1{font-size:1.45rem;margin:.1rem 0 .3rem;line-height:1.2}
+h2{font-size:1.12rem;margin:0 0 .6rem}
+h3{font-size:.95rem;margin:.9rem 0 .4rem;color:var(--mute);font-weight:600}
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:space-between}
+.tb{display:flex;gap:8px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 16px}
+.concl{border-left:5px solid var(--accent)}
+.concl p{margin:.3rem 0}
+.mute{color:var(--mute);font-size:.88rem}
+.good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:600}
+tr.sel td{background:var(--soft)}
+.tag{display:inline-block;font-size:.72rem;padding:1px 6px;border-radius:6px;background:var(--soft);color:var(--accent);margin-left:4px}
+.ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 16px;margin:0 0 6px}
+.ctrls>*{min-width:0}
+.ctl{display:block;font-size:.88rem;color:var(--mute)}
+.ctl .lt{display:flex;justify-content:space-between;gap:8px}
+.ctl b{color:var(--ink);white-space:nowrap}
+.ctl .hint{display:block;font-size:.78rem;color:var(--mute);margin-top:1px}
+.ctl .meas{display:block;font-size:.78rem;color:var(--accent);margin-top:1px}
+input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--accent)}
+select,input[type=number]{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+button{font:inherit;font-weight:600;padding:8px 14px;border:1px solid var(--accent);border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled{opacity:.5}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.seg button{background:transparent;color:var(--accent);padding:7px 14px}
+.seg button.on{background:var(--accent);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.kpis>*{min-width:0}
+.kpi{background:var(--soft);border-radius:10px;padding:10px}
+.kpi .v{font-size:1.15rem;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.kpi .l{font-size:.8rem;color:var(--mute)}
+.kpi .s{font-size:.76rem;color:var(--mute);margin-top:2px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0 4px;margin:0 0 8px}
+.track{height:5px;background:var(--line);border-radius:4px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--accent);transition:width .15s}
+.stale{opacity:.5}
+canvas{display:block;width:100%;touch-action:pan-y}
+#cv{height:clamp(260px,56vw,420px)}
+#hv{height:clamp(180px,38vw,260px)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--mute);margin:6px 0}
+.leg i{display:inline-block;width:16px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.opts{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin:0 0 8px;font-size:.88rem}
+.opts label{display:flex;gap:6px;align-items:center;color:var(--ink)}
+.opts select{width:auto}
+details{margin:8px 0}
+summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.92rem}
+ul{margin:.3rem 0;padding-left:1.2rem}
+li{margin:.25rem 0}
+.pb{height:8px;background:var(--line);border-radius:5px;overflow:hidden;min-width:90px}
+.pb>div{height:100%;background:var(--accent)}
+a{color:var(--accent);overflow-wrap:anywhere}
+
+.rowb{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+input[type=text]{width:100%;font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+details.fold>summary{font-size:1.12rem;font-weight:700;color:var(--ink);list-style:revert}
+details.fold[open]>summary{margin-bottom:10px}
+
+/* ===== Bloc Suivi jour par jour (suivi_bloc.css) ===== */
+/* 30/10 : bloc « Suivi des résultats » (chantier_3010/suivi). Tout est préfixé suivi- et rangé sous .suivi-racine :
+   rien ne fuit dans la page qui l'accueille. Couleurs : jetons --suivi-* (clair, sombre par le système ou data-theme). */
+.suivi-racine {
+  color-scheme: light;
+  --suivi-fond: #f6f5f2; --suivi-carte: #fcfcfb; --suivi-trait: #e4e2dc; --suivi-texte: #0b0b0b; --suivi-texte-2: #52514e;
+  --suivi-texte-3: #6e6d68; --suivi-gain: #0f7b3a; --suivi-perte: #c8302f; --suivi-teinte: #eeece6; --suivi-rouge: #d4342f;
+  --suivi-s1: #2a78d6; --suivi-s2: #eb6834; --suivi-s3: #1baf7a; --suivi-neutre: #b9b7b0;
+  color: var(--suivi-texte); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .suivi-racine {
+    color-scheme: dark;
+    --suivi-fond: #121211; --suivi-carte: #1a1a19; --suivi-trait: #2e2e2c; --suivi-texte: #f0efec; --suivi-texte-2: #c3c2b7;
+    --suivi-texte-3: #8f8e86; --suivi-gain: #3fbf6f; --suivi-perte: #ef6b6a; --suivi-teinte: #242422; --suivi-rouge: #ff7a75;
+    --suivi-s1: #3987e5; --suivi-s2: #d95926; --suivi-s3: #199e70; --suivi-neutre: #55544f;
+  }
+}
+:root[data-theme="dark"] .suivi-racine {
+  color-scheme: dark;
+  --suivi-fond: #121211; --suivi-carte: #1a1a19; --suivi-trait: #2e2e2c; --suivi-texte: #f0efec; --suivi-texte-2: #c3c2b7;
+  --suivi-texte-3: #8f8e86; --suivi-gain: #3fbf6f; --suivi-perte: #ef6b6a; --suivi-teinte: #242422; --suivi-rouge: #ff7a75;
+  --suivi-s1: #3987e5; --suivi-s2: #d95926; --suivi-s3: #199e70; --suivi-neutre: #55544f;
+}
+.suivi-racine *, .suivi-racine *::before, .suivi-racine *::after { box-sizing: border-box; }
+.suivi-racine h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.suivi-racine p { margin: 0; }
+.suivi-sous { color: var(--suivi-texte-3); font-size: .8rem; }
+.suivi-carte { background: var(--suivi-carte); border: 1px solid var(--suivi-trait); border-radius: 16px; padding: 14px 16px; margin-top: 12px; min-width: 0; }
+.suivi-choix { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.suivi-choix button { font: inherit; font-size: .88rem; padding: 7px 11px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); cursor: pointer; }
+.suivi-choix button[aria-pressed="true"] { background: var(--suivi-texte); color: var(--suivi-carte); border-color: var(--suivi-texte); font-weight: 700; }
+.suivi-jour { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.suivi-jour button { font: inherit; width: 40px; height: 36px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); cursor: pointer; }
+.suivi-jour select { font: inherit; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--suivi-trait); background: var(--suivi-carte); color: var(--suivi-texte); flex: 1; min-width: 0; }
+.suivi-diag { font-size: 1.08rem; font-weight: 700; }
+.suivi-diag small { display: block; font-weight: 400; color: var(--suivi-texte-2); font-size: .85rem; margin-top: 4px; }
+.suivi-tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .suivi-tuiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.suivi-tuile small { display: block; font-size: .72rem; color: var(--suivi-texte-3); text-transform: uppercase; letter-spacing: .04em; }
+.suivi-tuile b { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.suivi-tuile span { display: block; font-size: .75rem; color: var(--suivi-texte-3); }
+.suivi-large { grid-column: 1 / -1; }
+.suivi-gain { color: var(--suivi-gain); } .suivi-perte { color: var(--suivi-perte); }
+.suivi-ligne { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--suivi-trait); font-variant-numeric: tabular-nums; }
+.suivi-ligne.suivi-premiere { border-top: 0; }
+.suivi-ligne .suivi-nom { color: var(--suivi-texte-2); }
+.suivi-ligne.suivi-total { font-weight: 700; }
+.suivi-chance { padding: 10px 0; border-top: 1px solid var(--suivi-trait); }
+.suivi-chance.suivi-premiere { border-top: 0; }
+.suivi-tete { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.suivi-z { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.suivi-chance p { font-size: .85rem; color: var(--suivi-texte-2); }
+.suivi-jauge { position: relative; height: 10px; border-radius: 5px; margin: 8px 0 4px;
+  background: linear-gradient(90deg, var(--suivi-perte) 0%, var(--suivi-neutre) 33%, var(--suivi-neutre) 67%, var(--suivi-gain) 100%); }
+.suivi-jauge i { position: absolute; top: -4px; width: 4px; height: 18px; border-radius: 2px; background: var(--suivi-texte); box-shadow: 0 0 0 2px var(--suivi-carte); transform: translateX(-2px); }
+.suivi-reperes { display: flex; justify-content: space-between; font-size: .68rem; color: var(--suivi-texte-3); }
+.suivi-legende { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--suivi-texte-2); margin-bottom: 6px; }
+.suivi-legende i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.suivi-graphe { position: relative; }
+.suivi-graphe svg { width: 100%; height: 220px; display: block; touch-action: pan-y; }
+.suivi-bulle { position: absolute; pointer-events: none; background: var(--suivi-carte); border: 1px solid var(--suivi-trait); border-radius: 10px; padding: 6px 9px;
+  font-size: .78rem; box-shadow: 0 4px 14px rgba(0,0,0,.12); display: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.suivi-racine table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.suivi-racine th, .suivi-racine td { text-align: right; padding: 6px 4px; border-top: 1px solid var(--suivi-trait); }
+.suivi-racine th:first-child, .suivi-racine td:first-child { text-align: left; }
+.suivi-racine th { font-size: .72rem; color: var(--suivi-texte-3); font-weight: 600; text-transform: uppercase; border-top: 0; }
+.suivi-defile { overflow-x: auto; }
+.suivi-setup { padding: 8px 0; border-top: 1px solid var(--suivi-trait); font-size: .88rem; }
+.suivi-setup.suivi-premiere { border-top: 0; }
+.suivi-haut { display: flex; justify-content: space-between; gap: 8px; }
+.suivi-bas { color: var(--suivi-texte-2); font-size: .8rem; }
+.suivi-c { font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+.suivi-rouge { color: var(--suivi-rouge); }
+.suivi-item { padding: 8px 0; border-top: 1px solid var(--suivi-trait); font-size: .88rem; }
+.suivi-item.suivi-premiere { border-top: 0; }
+.suivi-item b { font-variant-numeric: tabular-nums; }
+.suivi-lex p { font-size: .85rem; color: var(--suivi-texte-2); padding: 3px 0; }
+.suivi-lex b { color: var(--suivi-texte); }
+.suivi-msg { padding: 14px; border-radius: 12px; background: var(--suivi-teinte); margin-top: 12px; }
+.suivi-attente { color: var(--suivi-texte-3); font-style: italic; }
+.suivi-ligne b, .suivi-z, .suivi-tuile b { white-space: nowrap; }   /* 30/10 : le « € » ne part jamais seul à la ligne */
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <h1>Simulateur de variance Twister</h1>
+  <div class="tb"><button class="ghost" id="bTheme">Thème : auto</button><button class="ghost" id="bReset">Valeurs mesurées</button></div>
+</div>
+<div class="seg" id="segTab" style="margin-top:8px"><button data-tab="sim" class="on">Simulateur</button><button data-tab="suivi">Suivi jour par jour</button></div>
+
+<div id="tabSim">
+<p class="mute">Pousse les curseurs : les chiffres et les graphiques se refont tout seuls. Chaque tournoi est tiré un par un avec le barème officiel PMU. Les réglages de départ sont nos vraies mesures. Les montants sont bruts : avant les parts reversées et les frais.</p>
+
+<div class="bar" role="status"><div class="track"><div class="fill" id="barFill"></div></div><div class="mute" id="barTxt">Prêt.</div></div>
+
+<section class="card concl" id="concl"></section>
+
+<section class="card" id="cReg">
+  <h2>Tes réglages</h2>
+  <div class="seg" id="segMode"><button data-mode="fixed" class="on">Un seul niveau</button><button data-mode="palier">Paliers de bankroll</button><button data-mode="vision">Vision : 6 comptes</button></div>
+  <div id="gSingle">
+    <h3>Niveau</h3>
+    <div class="seg" id="segLvl"><button data-b="1">1 €</button><button data-b="2" class="on">2 €</button><button data-b="5">5 €</button><button data-b="10">10 €</button></div>
+    <div class="ctrls">
+      <label class="ctl"><span class="lt">cEV : ta force au jeu (jetons gagnés par tournoi) <b id="v_cev"></b></span><input type="range" id="cev" min="-30" max="150" step="1"><span class="meas" id="m_cev"></span></label>
+    </div>
+    <div class="ctrls" id="g_ess"></div>
+  </div>
+  <div id="gVis">
+    <h3>Scénario vision : 2 comptes en 5 €, 2 en 2 €, 2 en 1 €</h3>
+    <div class="ctrls" id="g_vis"></div>
+    <p class="mute" id="visTot"></p>
+    <p class="mute">Le 1 € et le 2 € sont mesurés et gagnants. Le 5 € n'est pas encore prouvé : son chiffre est une hypothèse. Le premier compte du bloc « Plusieurs comptes » est celui de Simon, les autres reversent la part des titulaires.</p>
+  </div>
+  <div class="ctrls" id="g_dpm" style="margin-top:10px"></div>
+  <h3>Rakeback (l'argent que PMU te rend sur ses frais)</h3>
+  <div class="seg" id="segRb"><button data-rb="1">Selon mon volume</button><button data-rb="0">Manuel</button></div>
+  <p class="mute" id="rbNow"></p>
+  <div id="gPal">
+    <h3>Paliers de bankroll</h3>
+    <div class="ctrls" id="g_pal"></div>
+    <p class="mute">La bankroll monte d'un niveau quand elle atteint le seuil haut, et redescend sous le seuil bas. Chaque niveau a sa cEV (dans les réglages avancés). Une seule caisse pour les comptes affichés. Le bonus classement n'est pas compté dans ce mode.</p>
+  </div>
+  <details id="advBox"><summary>Réglages avancés (comptes, durée, argent, room en plus, précision)</summary>
+    <h3>Comptes et volume</h3>
+    <div class="ctrls" id="g_vol"></div>
+    <h3>Durée de la simulation</h3>
+    <div class="ctrls" id="g_dur"></div>
+    <h3>Argent</h3>
+    <div class="ctrls" id="g_mon"></div>
+    <h3>Room en plus (option)</h3>
+    <div class="ctrls" id="g_room"></div>
+    <h3>Jeu et rakeback manuel</h3>
+    <div class="ctrls">
+      <label class="ctl"><span class="lt">ROI du jeu, sans rakeback <b id="v_roi"></b></span><input type="range" id="roi" min="-12" max="25" step="0.1"><span class="hint">Autre façon de régler la cEV : les deux sont reliés.</span><span class="hint" id="roiTot"></span></label>
+    </div>
+    <div class="ctrls" id="g_rb"></div>
+    <h3>cEV de chaque niveau (tableaux et paliers)</h3>
+    <div class="ctrls" id="g_lv"></div>
+    <h3>Précision de la mesure</h3>
+    <div class="ctrls" id="g_adv"></div>
+  </details>
+  <div class="rowb">
+    <button id="bNew" class="ghost">Nouveau tirage</button>
+    <button id="bSave">Enregistrer ce scénario</button>
+    <button id="bLink" class="ghost">Copier le lien du scénario</button>
+  </div>
+  <p class="mute" id="scMsg"></p>
+  <details id="scBox"><summary>Mes scénarios enregistrés</summary>
+    <div class="ctrls" style="margin-top:8px">
+      <label class="ctl"><span class="lt">Nom du scénario</span><input type="text" id="scName" maxlength="40" placeholder="ex. vision 6 comptes"></label>
+      <label class="ctl"><span class="lt">Scénarios de cet appareil</span><select id="scList"></select></label>
+    </div>
+    <div class="rowb"><button id="scLoad" class="ghost">Charger</button><button id="scDel" class="ghost">Supprimer</button></div>
+    <label class="ctl" style="margin-top:8px"><span class="lt">Lien ou code à charger (colle ici)</span><input type="text" id="scCode" placeholder="lien ou code du scénario"></label>
+    <div class="rowb"><button id="scGo" class="ghost">Charger ce code</button></div>
+    <label class="ctl" style="margin-top:8px"><span class="lt">Lien du scénario (sans la clé des données)</span><input type="text" id="scLink" readonly></label>
+  </details>
+</section>
+
+<section class="card">
+  <h2 id="hGraph">Trajectoires de ton résultat cumulé</h2>
+  <div class="opts" id="optsFixed">
+    <label>Afficher en <select id="unit"><option value="eur">euros</option><option value="bi">buy-ins</option></select></label>
+    <label><input type="checkbox" id="showPaths" checked> trajectoires</label>
+    <label><input type="checkbox" id="showBands" checked> bandes 70 % et 95 %</label>
+  </div>
+  <div class="opts" id="optsPal" style="display:none">
+    <label><input type="checkbox" id="showPaths2" checked> trajectoires</label>
+    <label><input type="checkbox" id="showBands2" checked> bandes 70 % et 95 %</label>
+  </div>
+  <canvas id="cv" role="img" aria-label="Graphique des trajectoires simulées"></canvas>
+  <div class="leg" id="leg"></div>
+  <p class="mute" id="gNote">Touche ou survole le graphique pour lire les valeurs. Le gain compte le jeu, le rakeback et le classement estimé.</p>
+</section>
+
+<section class="card">
+  <h2>Combien tu peux gagner ou perdre</h2>
+  <div class="kpis" id="kA"></div>
+  <h3>Sur 1 jour, 1 semaine, 1 mois</h3>
+  <div class="scroll"><table id="tabH"></table></div>
+  <h3>Les détails du tirage</h3>
+  <div class="kpis" id="kB"></div>
+</section>
+
+<section class="card" id="cVis">
+  <h2>Vision : ce que change ta cEV, et le risque du 5 €</h2>
+  <div id="visBox"></div>
+</section>
+
+<section class="card" id="cFid">
+  <h2>Ton rakeback PMU en deux lignes</h2>
+  <div id="fidTop"></div>
+  <details class="fold"><summary>Voir le détail du programme de fidélité</summary>
+    <div class="ctrls" id="g_fid" style="margin-top:8px"></div>
+    <div id="fidBox"></div>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Coûts et parts : ce qui reste pour Simon et pour Mathieu</h2>
+  <div class="ctrls" id="g_sca"></div>
+  <div class="kpis" id="kS"></div>
+  <h3>Du brut au net</h3>
+  <div class="scroll"><table id="tabBN"></table></div>
+  <h3 id="hX">Selon le nombre de comptes</h3>
+  <div class="scroll"><table id="tabX"></table></div>
+  <p class="mute">Du brut au net : les gains de tous les comptes, moins la part des titulaires (comptes en plus de Simon et Mathieu), moins leur prime par mois, moins les machines, puis le partage du 30/10 : compte de Simon 95 / 5, comptes de Mathieu 50 / 50 ; tant que la dette CTV court, 20 % de tous les gains vont en plus à Mathieu (75 / 25 et 30 / 70). Montants bruts avant ces coûts. Le prix des machines et la prime sont des hypothèses à régler. Chaque compte demande l'accord écrit de PMU avant.</p>
+</section>
+
+<section class="card" id="cMult">
+  <h2>Les gros multiplicateurs (x10, x100, x1000) : à quoi s'attendre</h2>
+  <p class="mute">Avant chaque tournoi, PMU tire un multiplicateur au hasard (x2 à x1000). Il multiplie le prix à se partager. À partir de x10, les 3 joueurs touchent une part : 75 % pour le 1er, 15 % pour le 2e, 10 % pour le 3e. Même le 3e gagne au moins 10 % du prix. Il n'y a pas de x25 chez PMU : après x10 vient x20.</p>
+  <div id="multBox"></div>
+  <h3>Mini-simulateur : sur N tournois, quelle chance d'en avoir ?</h3>
+  <div class="ctrls" id="g_mult"></div>
+  <div id="multSim"></div>
+  <h3>Ce que vous avez eu jusqu'ici</h3>
+  <div id="multReel"></div>
+</section>
+
+<section class="card">
+  <details class="fold"><summary id="hHist">Résultat à la fin de la période</summary>
+  <canvas id="hv" role="img" aria-label="Histogramme du résultat final"></canvas>
+  <p class="mute" id="hNote"></p>
+</details></section>
+
+<section class="card" id="cPrec">
+  <details class="fold"><summary>Peut-on se fier à la cEV mesurée ?</summary>
+  <div id="precBox"></div>
+</details></section>
+
+<section class="card" id="cChance">
+  <details class="fold"><summary>Chance ou jeu ? Ce qui est arrivé contre ce qui était attendu</summary>
+  <div id="chanceBox"></div>
+</details></section>
+
+<section class="card">
+  <details class="fold"><summary>Ce que tu verras au début, ce que tu auras vraiment</summary>
+  <p class="mute">Ton vrai ROI est celui des curseurs. Ce que tu observes après N tournois en est très loin au début. Chaque ligne est simulée (tournoi par tournoi).</p>
+  <div class="scroll"><table id="tabS"></table></div>
+  <p class="mute" id="sNote"></p>
+</details></section>
+
+<section class="card">
+  <details class="fold"><summary>1 €, 2 €, 5 €, 10 € côte à côte</summary>
+  <div class="scroll"><table id="tabN"></table></div>
+  <p class="mute">Estimation rapide, sans les très gros jackpots (x100 et plus, qui ne font que monter). Classement non compté, même volume pour tous. Gains = jeu + rakeback, bruts. La ligne bleue est le niveau choisi. Bankroll conseillée : au moins 100 buy-ins, et assez pour que le risque de tout perdre reste sous 1 % (formule de PrimeDope).</p>
+  <h3 id="hSens"></h3>
+  <div class="scroll"><table id="tabC"></table></div>
+</details></section>
+
+<section class="card">
+  <details class="fold"><summary>Ce qu'on ne sait pas</summary>
+  <ul>
+    <li>La cEV en 5 € et 10 € : aucun tournoi joué. Les valeurs de départ (40) sont des scénarios prudents, pas des mesures.</li>
+    <li>Si la cEV tient dans la durée : voir l'encadré Précision. La cible est 10 000 tournois par niveau.</li>
+    <li>Le modèle « victoire = 1/3 + cEV/1500 » est une droite approximative. Il colle aux victoires observées (voir Chance), mais n'est pas prouvé hors de 70 à 85 de cEV.</li>
+    <li>Le volume : 26 jours de jeu par mois est une hypothèse (une nuit vide, une panne ou un jour sans jeu coûtent vite 10 %). Un 5 € à 2 comptes demande assez de tables et ne doit pas mettre deux comptes de la même équipe à la même table : pas vérifié, et à lire dans les conditions de PMU avant d'y croire.</li>
+    <li>Les adversaires peuvent changer (jour contre nuit, plus forts à 5 €), et PMU peut changer le barème ou les règles.</li>
+    <li>Le programme Rewards : seuils et pourcentages lus sur la page officielle PMU, datée ; le détail du versement par palier et le premier mois ne sont pas modélisés.</li>
+    <li>Le classement : barème des points (10 par victoire, 4 par 2e place) et prix au-delà du 3e à vérifier. Les prix sont en T€ (tickets), pas en cash : ici une estimation à régler soi-même.</li>
+    <li>L'accord écrit de PMU pour chaque compte, et la part de Mathieu.</li>
+    <li>Cette page ne remplace pas un conseil financier. Elle montre ce que le hasard peut faire avec les hypothèses choisies.</li>
+  </ul>
+</details></section>
+
+<section class="card">
+  <details class="fold"><summary>Sources et méthode</summary>
+  <ul>
+    <li>Barème officiel : poker.pmu.fr/twister (tableaux 1, 2, 5, 10 €, identiques à l'échelle, rake 7 %). Somme des probabilités : <b id="sumP"></b>.</li>
+    <li>Programme de fidélité : <a href="https://cloud.contact.pmu.fr/programme_pmu_poker_rewards" target="_blank" rel="noopener">PMU Poker Rewards</a> (statuts Star 1 à Star 5, Crack, Suprême).</li>
+    <li>Fonctions reprises : <a href="https://www.primedope.com/poker-variance-calculator/" target="_blank" rel="noopener">PrimeDope, variance du poker</a> (trajectoires, bandes 70 et 95 %, probabilité de perte, bankroll sous 5 % de ruine, formule de Malmuth) ; <a href="https://www.primedope.com/tournament-variance-calculator/" target="_blank" rel="noopener">PrimeDope, variance des tournois</a> (20 trajectoires, histogramme, ROI observé, risque de ruine par simulation, baisses par percentile) ; <a href="https://poker.academy/variance-calculator" target="_blank" rel="noopener">Poker Academy</a> (plusieurs joueurs simulés, probabilité de perte, risque de ruine) ; <a href="https://github.com/apheleia/poker-spinner" target="_blank" rel="noopener">poker-spinner</a> (simulateur de Spin &amp; Go, tirage du multiplicateur) ; SwongSim (cité par <a href="https://www.pokerstrategy.com/news/content/Why-ChipEV-is-the-most-important-Spin-Go-metric_104944/" target="_blank" rel="noopener">PokerStrategy</a>, qui défend la cEV comme mesure de départ).</li>
+    <li>Ajouts propres à cette page : tirage du multiplicateur officiel PMU avec partage 75 / 15 / 10 % dès x10, rakeback séparé du jeu, paliers de bankroll, scénario à 6 comptes, plus longue période sans nouveau sommet, part des jackpots, comptes multiples.</li>
+    <li>Données réelles : carnets des 2 comptes (Simon, Mathieu), script donnees_reelles.py. Dernière mise à jour des données : <b id="dataDate"></b>.</li>
+  </ul>
+</details></section>
+</div>
+
+<div id="tabSuivi" style="display:none">
+  <section class="card">
+    <h2>Suivi jour par jour</h2>
+    <div id="suiviBox"></div>
+  </section>
+</div>
+</main>
+
+<script type="application/json" id="donnees-reelles">{}</script>
+<script type="application/json" id="donnees-suivi">{}</script>
+
+<script>
+/* ===== Bloc Suivi jour par jour (suivi_bloc.js) ===== */
+/* 30/10 : bloc « Suivi des résultats » (chantier_3010/suivi), branchable n'importe où.
+   Usage : SuiviResultats.dessiner(conteneur, donnees)   (donnees = publie/suivi.json, produit par construire.py)
+   Aucune librairie, aucun id global : tout se cherche dans le conteneur. Classes CSS : suivi_bloc.css (préfixe suivi-).
+   Les choix (compte, période) sont gardés dans localStorage si permis (try/catch : jamais de plantage).
+   Brancher dans une autre page (ex. onglet du simulateur), dans cet ordre :
+     1. une balise style avec le contenu de suivi_bloc.css ;
+     2. une balise script type="application/json" id="donnees-suivi" contenant {} (construire.py la remplit seul) ;
+     3. une balise script avec le contenu de ce fichier ;
+     4. SuiviResultats.dessiner(conteneur, JSON.parse(document.getElementById("donnees-suivi").textContent)). */
+(function () {
+  "use strict";
+  const PERIODES = [["jour", "Jour", 1], ["sem", "7 jours", 7], ["mois", "30 jours", 30], ["t90", "90 jours", 90], ["m6", "6 mois", 182], ["an", "1 an", 365]];
+  const COMPTES = [["simon", "Simon"], ["mathieu", "Mathieu"], ["les2", "Les deux"]];
+  const ADD = ["n", "mises", "net", "jeu", "tapis", "mult", "vt", "vm", "h", "v", "naj", "aj", "aj2", "nhh", "mains", "sdev", "seur", "p2", "nset", "pj2", "j0", "psum", "pm", "g10", "g10a"];
+  const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  const CARTE = { h: "♥", d: "♦", c: "♣", s: "♠" };
+
+  // ---------------------------------------------------------------- petits outils
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const signe = x => x > 0 ? "+" : x < 0 ? "−" : "";
+  const nb = (x, d) => x == null || !isFinite(x) ? "–" : signe(x) + Math.abs(x).toFixed(d).replace(".", ",");
+  const nbs = (x, d) => x == null || !isFinite(x) ? "–" : (x < 0 ? "−" : "") + Math.abs(x).toFixed(d).replace(".", ",");
+  const eur = (x, d) => x == null || !isFinite(x) ? "–" : nb(x, d == null ? 2 : d) + " €";
+  const cls = x => x > 0 ? "suivi-gain" : x < 0 ? "suivi-perte" : "";
+  const ent = x => Math.round(x).toLocaleString("fr-FR");
+  const dateFr = d => d.slice(8, 10) + "/" + d.slice(5, 7);
+  const jourSem = d => JOURS[new Date(d + "T12:00:00").getDay()];
+  const premier = i => i === 0 ? " suivi-premiere" : "";
+  function phi(z) {                                     // loi normale : part des cas sous z
+    const t = 1 / (1 + 0.2316419 * Math.abs(z)), y = Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI);
+    const p = y * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return z >= 0 ? 1 - p : p;
+  }
+  function ajouteJours(d, k) { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + k); return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+  const cartes = t => !t ? "" : t.split(" ").map(c => "<span class='suivi-c" + ("hd".includes(c[1]) ? " suivi-rouge" : "") + "'>" + (c[0] === "T" ? "10" : c[0]) + CARTE[c[1]] + "</span>").join(" ");
+
+  // ---------------------------------------------------------------- calculs (une seule fonction par notion)
+  function vide() { const o = {}; ADD.forEach(k => o[k] = 0); o.mv = {}; o.ma = {}; o.sessions = []; o.pires = []; o.meilleurs = []; return o; }
+  function ajoute(a, j, nomCompte) {
+    ADD.forEach(k => a[k] += j[k] || 0);
+    for (const k in j.mv || {}) a.mv[k] = (a.mv[k] || 0) + j.mv[k];
+    for (const k in j.ma || {}) a.ma[k] = (a.ma[k] || 0) + j.ma[k];
+    (j.sessions || []).forEach(s => a.sessions.push(Object.assign({ compte: nomCompte }, s)));
+    a.pires = a.pires.concat(j.pires || []); a.meilleurs = a.meilleurs.concat(j.meilleurs || []);
+    return a;
+  }
+  // chiffres dérivés d'un groupe de tournois (session, jour, période)
+  function calcule(a, B) {
+    const r = Object.assign({}, a);
+    r.roi = a.mises ? a.net / a.mises : null;
+    r.parH = a.h > 0.05 ? a.net / a.h : null;
+    r.cev = a.naj ? a.aj / a.naj : null;
+    const sd = a.naj > 1 ? Math.sqrt(Math.max(0, (a.aj2 - a.aj * a.aj / a.naj) / (a.naj - 1))) : null;
+    r.ic = sd != null ? 1.96 * sd / Math.sqrt(a.naj) : null;
+    r.zT = a.vt > 0 ? a.tapis / Math.sqrt(a.vt) : null;
+    r.zM = a.vm > 0 ? a.mult / Math.sqrt(a.vm) : null;
+    r.zS = a.nhh > 0 && a.p2 > 0 && B && B.sigma ? a.seur / (B.sigma * Math.sqrt(a.p2)) : null;   // en € : signe = signe du montant
+    r.setupsEur = a.nhh > 0 ? a.seur : null;
+    r.cevHors = r.cev != null && a.nhh > 0 ? r.cev - a.sdev / a.nhh : null;
+    r.jeuHors = a.nhh > 0 ? a.jeu - a.seur : null;            // = réel sans la chance
+    r.couv = a.n ? a.nhh / a.n : 0;
+    // 30/10 (relecture) : UN seul « jeu » (hors setups quand les mains sont lues), sa fourchette à 95 %, le point mort
+    // de la mise jouée, et la part de chance des cartes quand la cEV sort très au-dessus (ou au-dessous) de la normale
+    r.jeuUn = r.jeuHors != null ? r.jeuHors : a.jeu;
+    r.chance = a.net - r.jeuUn;
+    r.pm = a.n ? a.pm / a.n : null;
+    const sdT = B && B.sd_aj ? B.sd_aj : sd;
+    r.icJeu = sdT && a.pj2 > 0 ? 1.96 * sdT * Math.sqrt(a.pj2) : null;
+    r.jeuMoy = B && B.cev_moy != null ? a.j0 + B.cev_moy * a.psum : null;
+    r.zCev = sdT && a.naj > 0 && B && B.cev_moy != null ? (r.cev - B.cev_moy) / (sdT / Math.sqrt(a.naj)) : null;
+    r.cartes = r.zCev != null && Math.abs(r.zCev) >= 1 && r.jeuMoy != null ? a.jeu - r.jeuMoy : null;   // cEV à plus d'1 écart-type de la moyenne
+    return r;
+  }
+  function verdictJeu(c, pm) {                          // pm = point mort de la mise jouée (0,25 € : +45 ; 1-2-5 € : +38)
+    if (c == null) return "jeu non mesuré";
+    if (pm == null) pm = 38;
+    if (c >= pm + 22) return "bon jeu";
+    if (c >= pm) return "jeu correct";
+    if (c >= 0) return "jeu sous le point mort";
+    return "jeu perdant";
+  }
+  // LA phrase de diagnostic : « Jour perdant à cause des setups (−2,1) et des tapis (−1,4), jeu correct (cEV +70) »
+  function diagnostic(r, mot) {
+    const e = mot === "Période" ? "e" : "";
+    const g = r.net > 0.005 ? mot + " gagnant" + e : r.net < -0.005 ? mot + " perdant" + e : mot + " à zéro";
+    // 30/10 (relecture) : en € et en part du gain. « +112 € = 29 € de jeu + 84 € de chance (multiplicateurs +54, ...) »
+    let t = (r.incomplet || (r.etat || []).some(e => !e.complet) ? "Jour incomplet · " : "") + g + " : " + eur(r.net, 0) + " = " + nbs(r.jeuUn, 0) + " € de jeu " +
+      (r.chance >= 0 ? "+ " : "− ") + Math.abs(r.chance).toFixed(0) + " € de chance";        // le détail : cartes « chance » juste dessous
+    if (Math.abs(r.net) >= 1) t += Math.abs(r.chance) > Math.abs(r.net) / 2 ? " : surtout de la chance" : " : surtout du jeu";
+    const c = r.cevHors != null ? r.cevHors : r.cev;
+    t += ". " + verdictJeu(c, r.pm)[0].toUpperCase() + verdictJeu(c, r.pm).slice(1) + " (cEV " + nb(c, 0) + ", point mort " + nb(r.pm, 0) + ")";
+    if (r.zS == null) t += ", setups en attente";
+    return t;
+  }
+  // Benjamini-Hochberg (10 %) sur tous les scores de chance des jours de la période
+  function joursHorsNormes(jours, B) {
+    const tests = [];
+    for (const j of jours) {
+      const r = calcule(j, B);
+      [["setups", r.zS], ["tapis", r.zT], ["multiplicateurs", r.zM]].forEach(([n, z]) => { if (z != null) tests.push({ d: j.date, n, z, p: 2 * (1 - phi(Math.abs(z))) }); });
+    }
+    tests.sort((a, b) => a.p - b.p);
+    let k = 0;
+    tests.forEach((t, i) => { if (t.p <= 0.10 * (i + 1) / tests.length) k = i + 1; });
+    return { n: tests.length, retenus: tests.slice(0, k) };
+  }
+
+  // ---------------------------------------------------------------- morceaux de page
+  function chance(nom, expl, z, euros, i) {
+    if (z == null) return "<div class='suivi-chance" + premier(i) + "'><div class='suivi-tete'><b>" + nom + "</b><span class='suivi-z suivi-attente'>en attente</span></div><p>" + expl + "</p><p class='suivi-attente'>Mains pas encore lues pour cette période : pas de chiffre (ce n'est pas 0).</p></div>";
+    const pos = Math.max(0, Math.min(100, (z + 3) / 6 * 100));
+    const mot = Math.abs(z) < 1 ? "normal" : z >= 2 ? "très chanceux" : z >= 1 ? "chanceux" : z <= -2 ? "très malchanceux" : "malchanceux";
+    return "<div class='suivi-chance" + premier(i) + "'><div class='suivi-tete'><b>" + nom + "</b><span class='suivi-z " + cls(euros) + "'>" + eur(euros, 0) + "</span></div>" +
+      "<div class='suivi-jauge' role='img' aria-label='" + nom + " " + nb(z, 1) + "'><i style='left:" + pos.toFixed(1) + "%'></i></div>" +
+      "<div class='suivi-reperes'><span>très malchanceux</span><span>normal</span><span>très chanceux</span></div>" +
+      "<p><b>" + mot[0].toUpperCase() + mot.slice(1) + "</b>. " + expl + "</p></div>";
+  }
+  const SERIES = [["Réel", "net", "var(--suivi-s1)", ""], ["Réel sans la chance (le jeu)", "sans", "var(--suivi-s3)", "6 4"]];
+  function courbe(points) {
+    if (points.length < 2) return { html: "<p class='suivi-sous'>Courbe : il faut au moins 2 points (2 sessions ou 2 jours).</p>" };
+    const cum = {}; SERIES.forEach(s => { let t = 0; cum[s[1]] = [0].concat(points.map(p => (t += (p[s[1]] == null ? NaN : p[s[1]])))); });
+    const tous = [].concat(...SERIES.map(s => cum[s[1]])).filter(isFinite);
+    const lo = Math.min(0, ...tous), hi = Math.max(0, ...tous), e = (hi - lo) || 1, W = 320, H = 200, n = points.length;
+    const X = i => 34 + i * (W - 40) / n, Y = y => 10 + (hi - y) * (H - 30) / e;
+    let svg = "<svg viewBox='0 0 " + W + " " + H + "' preserveAspectRatio='none' role='img' aria-label='Courbe cumulée'>";
+    [lo, 0, hi].filter(v => v === 0 || Math.abs(Y(v) - Y(0)) > 12).forEach(v => { svg += "<line x1='34' x2='" + (W - 6) + "' y1='" + Y(v).toFixed(1) + "' y2='" + Y(v).toFixed(1) + "' stroke='var(--suivi-trait)' stroke-width='1' vector-effect='non-scaling-stroke'" + (v === 0 ? "" : " stroke-dasharray='2 3'") + "/>" +
+      "<text x='30' y='" + (Y(v) + 3).toFixed(1) + "' font-size='9' text-anchor='end' fill='var(--suivi-texte-3)'>" + nbs(v, 0) + "</text>"; });
+    for (const s of SERIES) {
+      const v = cum[s[1]]; if (!v.slice(1).every(isFinite)) continue;      // série incomplète (setups en attente) : pas tracée
+      svg += "<polyline fill='none' stroke='" + s[2] + "' stroke-width='2' stroke-linejoin='round' stroke-dasharray='" + s[3] + "' vector-effect='non-scaling-stroke' points='" + v.map((y, i) => X(i).toFixed(1) + "," + Y(y).toFixed(1)).join(" ") + "'/>";
+    }
+    svg += "<line class='suivi-curseur' x1='0' x2='0' y1='8' y2='" + (H - 18) + "' stroke='var(--suivi-texte-3)' stroke-width='1' vector-effect='non-scaling-stroke' visibility='hidden'/>";
+    svg += "<text x='34' y='" + (H - 4) + "' font-size='9' fill='var(--suivi-texte-3)'>" + esc(points[0].nom) + "</text><text x='" + (W - 6) + "' y='" + (H - 4) + "' font-size='9' text-anchor='end' fill='var(--suivi-texte-3)'>" + esc(points[n - 1].nom) + "</text></svg>";
+    const leg = "<div class='suivi-legende'>" + SERIES.map(s => "<span><i style='border-color:" + s[2] + ";border-top-style:" + (s[3] ? "dashed" : "solid") + "'></i>" + s[0] + "</span>").join("") + "</div>";
+    return { html: leg + "<div class='suivi-graphe'>" + svg + "<div class='suivi-bulle'></div></div>", points, cum, X, W };
+  }
+  function brancherBulle(racine, c) {
+    const g = racine.querySelector(".suivi-graphe"); if (!g || !c.points) return;
+    const svg = g.querySelector("svg"), b = g.querySelector(".suivi-bulle"), cur = g.querySelector(".suivi-curseur");
+    const bouge = ev => {
+      const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * c.W;
+      let i = Math.round((x - 34) / ((c.W - 40) / c.points.length)); i = Math.max(1, Math.min(c.points.length, i));
+      cur.setAttribute("x1", c.X(i)); cur.setAttribute("x2", c.X(i)); cur.setAttribute("visibility", "visible");
+      b.innerHTML = "<b>" + esc(c.points[i - 1].nom) + "</b><br>Réel " + eur(c.cum.net[i]) + "<br>Sans la chance " + eur(c.cum.sans[i]);
+      b.style.display = "block";
+      const px = c.X(i) / c.W * r.width; b.style.left = Math.max(0, Math.min(r.width - b.offsetWidth, px - b.offsetWidth / 2)) + "px"; b.style.top = "4px";
+    };
+    svg.addEventListener("pointermove", bouge); svg.addEventListener("pointerdown", bouge);
+    svg.addEventListener("pointerleave", () => { b.style.display = "none"; cur.setAttribute("visibility", "hidden"); });
+  }
+  function setups(liste, titre, mot) {
+    if (!liste.length) return "<h2>" + titre + "</h2><p class='suivi-sous'>Aucun " + mot + " setup extrême.</p>";
+    return "<h2>" + titre + "</h2>" + liste.map((c, i) => "<div class='suivi-setup" + premier(i) + "'><div class='suivi-haut'><span>" + cartes(c.h) + " <span class='suivi-sous'>contre</span> " + cartes(c.v) +
+      (c.adv > 1 ? " <span class='suivi-sous'>(+1 autre)</span>" : "") + "</span><b class='" + cls(c.e) + "'>" + eur(c.e) + "</b></div>" +
+      "<div class='suivi-bas'>" + esc(c.cat) + " · " + (c.rue === "preflop" ? "à tapis avant le flop" : "argent entré au " + c.rue + " sur " + cartes(c.bm)) +
+      " · équité " + Math.round(c.eq * 100) + " %" + (c.bd ? " · board final " + cartes(c.bd) : "") + "</div>" +
+      "<div class='suivi-bas'>" + esc(c.q.slice(3, 5) + "/" + c.q.slice(0, 2) + " à " + c.q.slice(6, 11)) + " · " + esc(c.c === "simon" ? "Simon" : c.c === "mathieu" ? "Mathieu" : c.c) + " · " + String(c.b).replace(".", ",") + " € · " + nb(c.j, 0) + " jetons à l'équité</div></div>").join("");
+  }
+  function multiplicateurs(r) {
+    const K = ["2", "3", "4", "5", "10+"];
+    let t = "<div class='suivi-defile'><table><tr><th>Sur nos victoires</th>" + K.map(k => "<th>x" + k + "</th>").join("") + "</tr>";
+    t += "<tr><td>Tirés</td>" + K.map(k => "<td>" + (r.mv[k] || 0) + "</td>").join("") + "</tr>";
+    t += "<tr><td>Attendus</td>" + K.map(k => "<td>" + (r.ma[k] || 0).toFixed(1).replace(".", ",") + "</td>").join("") + "</tr></table></div>";
+    t += "<p class='suivi-sous' style='margin-top:6px'>Tournois x10 et plus (toutes places, 1 € et plus) : " + r.g10 + " tirés pour " + r.g10a.toFixed(1).replace(".", ",") + " attendus. Victoires dont le multiplicateur n'a pas pu être reconnu : non comptées.</p>";
+    return t;
+  }
+
+  // ---------------------------------------------------------------- dessin
+  function dessiner(conteneur, D) {
+    if (!conteneur) return;
+    const racine = document.createElement("div");
+    racine.className = "suivi-racine";
+    conteneur.innerHTML = ""; conteneur.append(racine);
+    if (!D || !D.comptes) { racine.innerHTML = "<div class='suivi-msg'>Données de suivi pas encore disponibles.</div>"; return; }
+    const B = D.base_setups || {};
+    const etat = { compte: "les2", periode: "jour", date: null };
+    try { const s = JSON.parse(localStorage.getItem("suivi-choix") || "{}"); if (s.compte) etat.compte = s.compte; if (s.periode) etat.periode = s.periode; } catch (e) { /* stockage interdit */ }
+    const g = D.genere || "";
+    racine.innerHTML = "<div class='suivi-sous'>Chiffres du " + g.slice(8, 10) + "/" + g.slice(5, 7) + " à " + g.slice(11, 16) + " · refaits seuls toutes les heures</div>" +
+      "<div class='suivi-choix' data-r='compte'></div><div class='suivi-choix' data-r='periode'></div>" +
+      "<div class='suivi-jour'><button type='button' data-r='avant' aria-label='Jour d’avant'>‹</button><select data-r='date' aria-label='Jour'></select><button type='button' data-r='apres' aria-label='Jour d’après'>›</button></div>" +
+      "<div data-r='contenu'></div>";
+    const q = r => racine.querySelector("[data-r='" + r + "']");
+    const comptesChoisis = () => etat.compte === "les2" ? ["simon", "mathieu"] : [etat.compte];
+    const toutesDates = () => { const s = new Set(); for (const c of comptesChoisis()) for (const j of (D.comptes[c] || { jours: [] }).jours) s.add(j.date); return [...s].sort(); };
+    function jourDe(date) {
+      let a = null;
+      for (const c of comptesChoisis()) {
+        const cj = (D.comptes[c] || { jours: [] }).jours.find(j => j.date === date);
+        if (cj) { a = ajoute(a || vide(), cj, D.comptes[c].nom); a.etat = (a.etat || []).concat([{ nom: D.comptes[c].nom, complet: cj.complet !== false, recu: D.comptes[c].recu || "" }]); }
+      }
+      if (a) a.date = date;
+      return a;
+    }
+    function boutons(zone, liste, cle) {
+      zone.innerHTML = "";
+      for (const [v, t] of liste) {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String(etat[cle] === v));
+        b.onclick = () => { etat[cle] = v; try { localStorage.setItem("suivi-choix", JSON.stringify({ compte: etat.compte, periode: etat.periode })); } catch (e) { /* rien */ } rendu(); };
+        zone.append(b);
+      }
+    }
+    function rendu() {
+      boutons(q("compte"), COMPTES, "compte");
+      boutons(q("periode"), PERIODES.map(p => [p[0], p[1]]), "periode");
+      const dates = toutesDates(), sel = q("date"), C = q("contenu");
+      if (!dates.length) { C.innerHTML = "<div class='suivi-msg'>Aucun tournoi pour ce choix.</div>"; return; }
+      if (!etat.date || !dates.includes(etat.date)) etat.date = dates[dates.length - 1];
+      sel.innerHTML = dates.slice().reverse().map(d => "<option value='" + d + "'" + (d === etat.date ? " selected" : "") + ">" + jourSem(d) + " " + dateFr(d) + "</option>").join("");
+      const long = PERIODES.find(p => p[0] === etat.periode)[2], debut = ajouteJours(etat.date, -(long - 1));
+      const jours = dates.filter(d => d >= debut && d <= etat.date).map(jourDe).filter(Boolean);
+      const a = vide(); jours.forEach(j => ajoute(a, j, null));
+      const r = calcule(a, B), unJour = long === 1, mot = unJour ? "Jour" : "Période";
+      r.incomplet = unJour && jours.length && jours[0].etat.some(e => !e.complet);
+      const recus = comptesChoisis().map(c => D.comptes[c] && D.comptes[c].recu ? D.comptes[c].nom + " reçu jusqu'au " + dateFr(D.comptes[c].recu.slice(0, 10)) + " " + D.comptes[c].recu.slice(11, 16) : "").filter(Boolean).join(" · ");
+      let h = "<div class='suivi-carte'><div class='suivi-diag'>" + esc(diagnostic(r, mot)) + "<small>" +
+        (unJour ? jourSem(etat.date) + " " + dateFr(etat.date) : "Du " + dateFr(jours.length ? jours[0].date : debut) + " au " + dateFr(etat.date) + " · " + jours.length + " jour(s) joué(s)") +
+        (debut < dates[0] && !unJour ? " · données depuis le " + dateFr(dates[0]) + " seulement" : "") +
+        (unJour && jours.length ? jours[0].etat.map(e => " · " + e.nom + (e.complet ? " : jour complet" : " : jour incomplet, données reçues jusqu'à " + e.recu.slice(11, 16))).join("") : "") +
+        (!unJour && recus ? " · " + recus : "") + "</small></div></div>";
+      h += "<div class='suivi-carte'><div class='suivi-tuiles'>" +
+        "<div class='suivi-tuile'><small>Gain réel</small><b class='" + cls(r.net) + "'>" + eur(r.net) + "</b><span>ROI " + (r.roi == null ? "–" : nb(100 * r.roi, 1) + " %") + "</span></div>" +
+        "<div class='suivi-tuile'><small>€ par heure</small><b class='" + cls(r.parH) + "'>" + eur(r.parH) + "</b><span>" + nbs(r.h, 1) + " h de jeu</span></div>" +
+        "<div class='suivi-tuile'><small>Tournois</small><b>" + ent(r.n) + "</b><span>" + r.v + " victoires (" + (r.n ? Math.round(100 * r.v / r.n) : 0) + " %)</span></div>" +
+        "<div class='suivi-tuile'><small>Mains</small><b>" + (r.nhh ? ent(r.mains) : "<span class='suivi-attente'>en attente</span>") + "</b><span>lues sur " + Math.round(100 * r.couv) + " % des tournois</span></div>" +
+        "<div class='suivi-tuile suivi-large'><small>cEV (jetons gagnés par tournoi, tapis ajustés)</small><b class='" + cls(r.cev) + "'>" + nb(r.cev, 0) + "</b><span>95 % de chances que la vraie cEV soit entre " + nb(r.cev - r.ic, 0) + " et " + nb(r.cev + r.ic, 0) + " · point mort " + nb(r.pm, 0) + (r.cevHors != null ? " · hors setups : " + nb(r.cevHors, 0) : "") + "</span></div>" +
+        "</div></div>";
+      h += "<div class='suivi-carte'><h2>D'où vient le gain</h2>" +
+        "<div class='suivi-ligne suivi-premiere'><span class='suivi-nom'>Jeu" + (r.icJeu != null ? "<br><small class='suivi-sous'>vraie valeur probablement entre " + nb(r.jeuUn - r.icJeu, 0) + " et " + nb(r.jeuUn + r.icJeu, 0) + " €</small>" : "") + "</span><b class='" + cls(r.jeuUn) + "'>" + eur(r.jeuUn) + "</b></div>" +
+        (r.cartes != null ? "<div class='suivi-ligne'><span class='suivi-nom'>dont " + (r.cartes > 0 ? "chance" : "malchance") + " probable des cartes<br><small class='suivi-sous'>cEV " + nb(r.cev, 0) + " contre " + nb(B.cev_moy, 0) + " en moyenne : " + (r.cartes > 0 ? "ce qui dépasse" : "ce qui manque") + " vient surtout des cartes reçues</small></span><b>" + eur(r.cartes, 0) + "</b></div>" : "") +
+        "<div class='suivi-ligne'><span class='suivi-nom'>+ Chance (tapis, multiplicateurs, setups : détail juste dessous)</span><b class='" + cls(r.chance) + "'>" + eur(r.chance) + "</b></div>" +
+        "<div class='suivi-ligne suivi-total'><span>= Gain réel</span><b class='" + cls(r.net) + "'>" + eur(r.net) + "</b></div>" +
+        "<p class='suivi-sous'>Jeu = ce que la cEV rapporte, hors setups. Sans rakeback ni classements.</p></div>";
+      h += "<div class='suivi-carte'><h2>La chance en un chiffre</h2>" +
+        chance("Setups", "La donne des cartes dans les confrontations extrêmes (77 contre 66, couleur contre couleur), comparée à la moyenne.", r.zS, r.setupsEur, 0) +
+        chance("Tapis", "Résultat des tapis comparé à l'équité au moment du tapis.", r.zT, r.tapis, 1) +
+        chance("Multiplicateurs", "Multiplicateurs tirés comparés au barème officiel PMU.", r.zM, r.mult, 2) + "</div>";
+      const deux = etat.compte === "les2";
+      const pts = unJour ? r.sessions.map(s => { const c = calcule(Object.assign(vide(), s), B); return { nom: (deux ? (s.compte || "") + " " : "") + (s.debut || "fin"), net: s.net, sans: c.jeuUn }; })
+        : jours.map(j => { const c = calcule(j, B); return { nom: dateFr(j.date), net: j.net, sans: c.jeuUn }; });
+      const cb = courbe(pts);
+      h += "<div class='suivi-carte'><h2>Courbe " + (unJour ? "des sessions du jour" : "jour par jour") + " (€ cumulés)</h2>" + cb.html + "</div>";
+      if (unJour) {
+        h += "<div class='suivi-carte'><h2>Les sessions</h2><div class='suivi-defile'><table><tr><th>Session</th><th>Tournois</th><th>Réel</th><th>Jeu</th><th>Setups</th><th>Tapis</th><th>Mult.</th><th>cEV</th></tr>" +
+          r.sessions.map(s => { const c = calcule(Object.assign(vide(), s), B); return "<tr><td>" + esc((deux ? s.compte + " " : "") + (s.id === "hors session" ? "fin de session pas encore rangée" : s.debut + (s.direct ? " (résumé)" : ""))) + "</td><td>" + s.n + "</td><td class='" + cls(s.net) + "'>" + nb(s.net, 1) + "</td><td>" + nb(c.jeuUn, 1) + "</td><td>" + (c.setupsEur == null ? "<span class='suivi-attente'>attente</span>" : nb(c.setupsEur, 1)) + "</td><td>" + nb(s.tapis, 1) + "</td><td>" + nb(s.mult, 1) + "</td><td>" + nb(c.cev, 0) + "</td></tr>"; }).join("") +
+          "</table></div><p class='suivi-sous'>En €. Jeu = hors setups. Sur téléphone, faire glisser le tableau de côté.</p></div>";
+      } else {
+        const bh = joursHorsNormes(jours, B);
+        h += "<div class='suivi-carte'><h2>Jour par jour</h2>" + jours.slice().reverse().map((j, i) => "<div class='suivi-item" + premier(i) + "'><b>" + jourSem(j.date) + " " + dateFr(j.date) + " · <span class='" + cls(j.net) + "'>" + eur(j.net) + "</span></b> · " + j.n + " tournois<br>" + esc(diagnostic(calcule(j, B), "Jour")) + "</div>").join("") +
+          "<p class='suivi-sous' style='margin-top:8px'>Vraiment hors normes après correction pour " + bh.n + " tests (méthode Benjamini-Hochberg, 10 %) : " +
+          (bh.retenus.length ? bh.retenus.map(t => dateFr(t.d) + " " + t.n + " (" + nb(t.z, 1) + ")").join(", ") : "aucun. Les écarts vus restent dans ce que le hasard produit sur autant de jours.") + "</p></div>";
+      }
+      const pires = r.pires.slice().sort((p, x) => p.e - x.e).slice(0, 5), meilleurs = r.meilleurs.slice().sort((p, x) => x.e - p.e).slice(0, 5);
+      h += "<div class='suivi-carte'>" + (r.nhh ? setups(pires, "Les 5 pires setups", "mauvais") + "<div style='height:12px'></div>" + setups(meilleurs, "Les 5 meilleurs setups", "bon") :
+        "<h2>Setups</h2><p class='suivi-attente'>Mains pas encore lues pour cette période.</p>") + "</div>";
+      h += "<div class='suivi-carte'><h2>Multiplicateurs : tirés contre attendus</h2>" + multiplicateurs(r) + "</div>";
+      h += "<div class='suivi-carte suivi-lex'><h2>Les mots en une ligne</h2>" +
+        "<p><b>cEV</b> : jetons gagnés en moyenne par tournoi, comme si chaque tapis avait donné son résultat moyen. Point mort : +38 en 1, 2 et 5 €, +45 en 0,25 € (le rake y est plus gros).</p>" +
+        "<p><b>Intervalle à 95 %</b> : la vraie cEV est dans cette fourchette 19 fois sur 20.</p>" +
+        "<p><b>ROI</b> : gain divisé par l'argent misé.</p>" +
+        "<p><b>Chance aux tapis</b> : ce que les tapis ont rapporté de plus (ou de moins) que leur équité.</p>" +
+        "<p><b>Chance aux multiplicateurs</b> : ce que les multiplicateurs tirés ont rapporté de plus que le barème.</p>" +
+        "<p><b>Setup</b> : une donne où les deux joueurs jouent bien et où le perdant ne pouvait rien faire. Compté seulement pour un tapis payé (pas la river) d'au moins 400 jetons, quand un des deux a 30 % ou moins au moment du tapis, et avant le flop, ou après le flop main forte contre main forte (deux paires ou mieux des deux côtés).</p>" +
+        "<p><b>Chance des setups</b> : jetons gagnés dans ces setups (à l'équité) moins la moyenne de " + nb(B.mu, 0) + " jetons par tournoi (mesurée sur " + ent(B.tournois || 0) + " tournois des 2 comptes), convertis en €.</p>" +
+        "<p><b>Le gros chiffre</b> = les € gagnés (ou perdus) par la chance. <b>La jauge</b> dit si c'est rare : au milieu = normal, au bord = très chanceux ou très malchanceux (1 jour sur 40).</p>" +
+        "<p><b>Réel sans la chance</b> : gain réel moins les 3 chances : ce que le jeu seul aurait rapporté.</p>" +
+        "<p><b>Journée</b> : de minuit à minuit, d'après l'heure de fin du tournoi.</p></div>";
+      C.innerHTML = h;
+      brancherBulle(racine, cb);
+    }
+    q("date").onchange = e => { etat.date = e.target.value; rendu(); };
+    const pas = k => { const ds = toutesDates(), i = ds.indexOf(etat.date) + k; if (i >= 0 && i < ds.length) { etat.date = ds[i]; rendu(); } };
+    q("avant").onclick = () => pas(-1);
+    q("apres").onclick = () => pas(1);
+    rendu();
+  }
+
+  window.SuiviResultats = { dessiner, calcule, diagnostic };
+})();
+</script>
+
+<script type="text/plain" id="appsimu">
+(function(){
+"use strict";
+
+/* ---------- Données de base ---------- */
+// Barème officiel PMU Twister 1, 2, 5, 10 € (identique à l'échelle) : [multiplicateur, probabilité]
+var BAREME = [[1000,1e-5],[200,3e-5],[100,1e-4],[20,5e-4],[10,3e-3],[5,.03],[4,.13],[3,.38128],[2,.45508]];
+var PARTS = [.75,.15,.10];   // multiplicateur 10 et plus : 1er, 2e, 3e
+var RAKE = .07;
+var NB = String.fromCharCode(160);
+function $(id){return document.getElementById(id);}
+
+var D = null;
+try { D = JSON.parse($("donnees-reelles").textContent); } catch(e){ D = null; }
+if (D && !(D.ensemble && D.comptes)) D = null;
+
+/* ---------- Formats ---------- */
+function num(x,d){
+  d = d||0; if(!isFinite(x)) return "?";
+  var f = Math.pow(10,d), r = Math.round(Math.abs(x)*f)/f;
+  var s = r.toFixed(d).split(".");
+  s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, NB);
+  return (x<0 && r>0 ? "-" : "") + s.join(",");
+}
+function eur(x,d){ if(!isFinite(x)) return "?"; var r=Math.round(Math.abs(x)*Math.pow(10,d||0)); return (x<0&&r>0?"-":"+")+num(Math.abs(x),d||0)+NB+"€"; }
+function eur0(x,d){ return num(x,d||0)+NB+"€"; }
+function pc(x,d){ if(!isFinite(x)) return "?"; d = d==null?0:d; return num(100*x,d)+NB+"%"; }
+function pcs(x,N){ // pourcentage lisible ; N = nombre de trajectoires (pour dire "moins de" quand on n'en voit aucune)
+  if(!isFinite(x)) return "?"; var v=100*x;
+  if(v===0) return N ? "moins de "+num(100/N,1)+NB+"%" : "0"+NB+"%";
+  if(v<0.1) return "moins de 0,1"+NB+"%"; if(v<10) return num(v,1)+NB+"%"; if(v>99.95) return "plus de 99,9"+NB+"%"; if(v>99) return num(v,1)+NB+"%"; return num(v,0)+NB+"%";
+}
+function jours(x){ if(!isFinite(x)) return "?"; if(x<1) return num(x*24,0)+NB+"h"; if(x<10) return num(x,1)+NB+"j"; return num(x,0)+NB+"j"; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function tile(v,l,s,cls){ return '<div class="kpi"><div class="v'+(cls?' '+cls:'')+'">'+v+'</div><div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'; }
+function signCls(x){ return x>=0?"good":"bad"; }
+
+/* ---------- État et valeurs mesurées ---------- */
+function mesure(lv){ var e = D && D.ensemble && D.ensemble[lv]; return (e && e.tournois>=300) ? e : null; }
+function r10(x){ return Math.max(0, Math.round(x/10)*10); }
+function defauts(){
+  var s = {mode:"fixed", b:2, cev:{1:80,2:80,5:40,10:40}, nS:550, nM:800, nC:2, nX:600, days:26, dpm:26, paths:600,
+           rb:10, rbAuto:false, bonus:0, bank:150, view:"all", up1:120, dn1:80, up2:300, dn2:200, unit:"eur", showPaths:true, showBands:true,
+           sd:400, pct:5, prim:30, mcy:60, mpa:1, shareS:50, sS0:95, sSM:50, dctv:20, dette:4000, spm:false, seed:12345, rest:680,
+           room2:false, r2coef:0.8, r2cev:80, r2rake:7, mN:5000,
+           vis:{k5:2,k2:2,k1:2,n5:700,n2:700,n1:700,c5:40,c2:80,c1:80}};
+  if (mesure("1")) s.cev[1] = Math.round(mesure("1").cev);
+  if (mesure("2")) s.cev[2] = Math.round(mesure("2").cev);
+  var sdm = mesure("2") || mesure("1");
+  if (sdm && sdm.sd_jetons>100) s.sd = Math.round(sdm.sd_jetons);
+  if (D) {
+    var rs = D.comptes.simon && D.comptes.simon.rythme, rm = D.comptes.mathieu && D.comptes.mathieu.rythme;
+    if (rs && rs.par_jour_moyenne) s.nS = r10(rs.par_jour_moyenne);
+    if (rm && rm.par_jour_moyenne) s.nM = r10(rm.par_jour_moyenne);
+  }
+  var moy = r10((s.nS+s.nM)/2) || 700;
+  s.vis.n5 = s.vis.n2 = s.vis.n1 = moy;
+  s.vis.c1 = s.cev[1]; s.vis.c2 = s.cev[2]; s.r2cev = s.cev[2];   // le scénario vision part des cEV mesurées
+  return s;
+}
+var S = defauts();
+
+function measLabel(lv){
+  var e = mesure(String(lv));
+  if (!e) return "Non mesuré à ce niveau : hypothèse, à ne pas croire.";
+  return "Mesuré sur "+num(e.tournois)+" tournois (Simon et Mathieu) : "+num(e.cev,0)+" ± "+num(1.96*e.erreur_type,0)+".";
+}
+
+/* ---------- Programme PMU Poker Rewards (page officielle cloud.contact.pmu.fr/programme_pmu_poker_rewards, relevée le 30/10) ---------- */
+// 1 point = 1 € de rake. Statuts mensuels : seuil de points par mois, rakeback. Statuts trimestriels : seuil par trimestre.
+var STARS = [["Star 1",0,0],["Star 2",10,.05],["Star 3",50,.075],["Star 4",200,.10],["Star 5",1000,.15]];
+var QUART = [["Crack",5000,.25],["Suprême",20000,.40]];
+function DPM(){ return S.dpm||26; }
+function rakeMonth(b,n){ return DPM()*n*b*RAKE; }              // points (€ de rake) par mois pour un compte
+function starOf(R){                                           // régime établi : même rake chaque mois
+  var i=0; STARS.forEach(function(s,k){ if(R>=s[1]) i=k; });
+  var name=STARS[i][0], rate=STARS[i][2];
+  QUART.forEach(function(q){ if(3*R>=q[1]){ name=q[0]; rate=q[2]; } });
+  return {name:name, rate:rate, idx:i};
+}
+function rbAutoFor(b,list){                                   // rakeback moyen selon le volume (programme PMU)
+  var tot=0, w=0;
+  list.forEach(function(n){ if(n>0){ var R=rakeMonth(b,n); tot+=R; w+=R*starOf(R).rate; } });
+  return tot>0 ? w/tot : S.rb/100;
+}
+function rbFor(b,list){                                       // rakeback moyen (fraction du rake) d'un niveau b pour des comptes de volumes list
+  return S.rbAuto ? rbAutoFor(b,list) : S.rb/100;
+}
+
+/* ---------- Moteur analytique ---------- */
+function volumes(){
+  var list=[], i;
+  for(i=0;i<S.nC;i++) list.push(i===0?S.nS:(i===1?S.nM:S.nX));
+  var tot=list.reduce(function(a,c){return a+c;},0), n=tot, acc=list.slice();
+  if (S.view==="simon"){ n=list[0]; acc=[list[0]]; } else if (S.view==="math"){ n=list[1]||0; acc=[list[1]||0]; }
+  var bonus = tot>0 ? S.bonus*n/tot : 0;
+  return {list:list, tot:tot, n:n, bonus:bonus, acc:acc};
+}
+function rbEff(){ return rbFor(S.b, volumes().acc); }
+function rbBI(){ return rbEff()*RAKE; }
+// ev = gain du jeu seul (en buy-ins par tournoi) ; rb = rakeback ; tot = jeu + rakeback
+function mom(cev, noJack, rbf, rk){
+  rk = (rk==null ? RAKE : rk);
+  var sc = (1-rk)/(1-RAKE);                                  // frais différents : les prix sont mis à l'échelle
+  var rbv = (rbf==null ? rbEff() : rbf)*rk;
+  var p1=1/3+cev/1500, p2=(1-p1)/2, m1=0, m2=0, share=PARTS[0]*p1+PARTS[1]*p2+PARTS[2]*p2, sh2=PARTS[0]*PARTS[0]*p1+PARTS[1]*PARTS[1]*p2+PARTS[2]*PARTS[2]*p2;
+  BAREME.forEach(function(r){
+    var m=r[0], p=r[1];
+    if (noJack && m>=100) return;
+    if (m>=10){ m1+=p*m*share; m2+=p*m*m*sh2; } else { m1+=p*m*p1; m2+=p*m*m*p1; }
+  });
+  m1*=sc; m2*=sc*sc;
+  return {p1:p1, prize:m1, ev:m1-1, rb:rbv, tot:m1-1+rbv, sd:Math.sqrt(m2-m1*m1)};
+}
+function cevFromRoi(r){ var e0=mom(0,false,0).ev, e1=mom(1,false,0).ev; return (r-e0)/(e1-e0); }   // ROI du jeu seul
+function breakEven(rbf){ var e0=mom(0,false,rbf==null?0:rbf).tot, e1=mom(1,false,rbf==null?0:rbf).tot; return -e0/(e1-e0); }   // sans argument : jeu seul
+function phi(z){ var t=1/(1+.2316419*Math.abs(z)), d=.3989423*Math.exp(-z*z/2), p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z>0?1-p:p; }
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(r){var u=r()||1e-9,v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+var ddCache = {};
+function pireBaisse(muJ, sdJ){
+  var dm=DPM(), key = Math.round(muJ*10)+"|"+Math.round(sdJ*10)+"|"+dm;
+  if (ddCache[key]!=null) return ddCache[key];
+  var r=rng(7), L=[];
+  for(var k=0;k<600;k++){var x=0,hi=0,pire=0;for(var j=0;j<dm;j++){x+=muJ+sdJ*gauss(r);if(x>hi)hi=x;if(x-hi<pire)pire=x-hi;}L.push(-pire);}
+  L.sort(function(a,b){return a-b;});
+  var v = L[Math.floor(.9*(L.length-1))];
+  var ks = Object.keys(ddCache); if (ks.length>400) ddCache = {};
+  ddCache[key]=v; return v;
+}
+// Calcul rapide d'une ligne (loi normale sans jackpots x100+). Gains = jeu + rakeback (+ classement).
+function quick(b, cev, n, bonusDay, withDD, rbf){
+  var a=mom(cev,false,rbf), s=mom(cev,true,rbf);
+  var muD=n*a.tot*b+bonusDay, muDs=n*s.tot*b+bonusDay, sdD=Math.sqrt(n)*s.sd*b;
+  var out={p1:a.p1, roi:a.ev, roiTot:a.tot, rbPts:a.rb, tour:a.tot*b, jour:muD, jeuJour:n*a.ev*b, rbJour:n*a.rb*b, mois:DPM()*muD};
+  if (n<=0){ out.lo=out.hi=0; out.perd=NaN; out.dd=0; out.bank=null; return out; }
+  var sdM=Math.sqrt(DPM())*sdD;
+  out.lo=DPM()*muD-1.645*sdM; out.hi=DPM()*muD+1.645*sdM; out.perd=phi(-DPM()*muDs/sdM);
+  out.dd = withDD ? pireBaisse(muDs, sdD) : NaN;
+  out.bank = s.tot<=0 ? null : Math.max(100, s.sd*s.sd*Math.log(100)/(2*s.tot))*b;
+  return out;
+}
+// Scénario vision : plusieurs niveaux, plusieurs comptes par niveau
+// Room en plus (option) : volume x coefficient, cEV et frais propres. Retourne les gains par jour de chaque room.
+function roomsDay(V,b){
+  var a=mom(S.cev[b],false), d1=V.n*a.tot*b+V.bonus, out={d1:d1, j1:V.n*a.ev*b, r1:V.n*a.rb*b, d2:0, j2:0, r2:0, n2:0, on:!!S.room2};
+  if (S.room2){
+    var n2=V.n*S.r2coef, a2=mom(S.r2cev,false,rbEff(),S.r2rake/100);
+    out.n2=n2; out.j2=n2*a2.ev*b; out.r2=n2*a2.rb*b; out.d2=out.j2+out.r2;
+  }
+  out.tot=out.d1+out.d2; return out;
+}
+function visLevels(){
+  var out=[];
+  [[2,"k2","n2","c2"],[5,"k5","n5","c5"],[1,"k1","n1","c1"]].forEach(function(a){
+    var k=S.vis[a[1]], n=S.vis[a[2]];
+    if (k>0 && n>0) out.push({b:a[0], k:k, n:n, nTot:k*n, cev:S.vis[a[3]], key:a[3]});
+  });
+  return out;
+}
+function visCalc(over){                                       // over = {c2: 90} pour tester une autre cEV
+  var L=visLevels(), t={perDay:0, jeuDay:0, rbDay:0, nDay:0, acc:0, varD:0, muDs:0, levels:[], bank:0, bankOk:true};
+  L.forEach(function(l){
+    var cev = (over && over[l.key]!=null) ? over[l.key] : l.cev, rbf=rbFor(l.b,[l.n]);
+    var a=mom(cev,false,rbf), s=mom(cev,true,rbf);
+    var jeu=l.nTot*a.ev*l.b, rb=l.nTot*a.rb*l.b;
+    var bk = s.tot<=0 ? null : Math.max(100, s.sd*s.sd*Math.log(100)/(2*s.tot))*l.b*l.k;
+    t.levels.push({b:l.b, k:l.k, n:l.n, nTot:l.nTot, cev:cev, roi:a.ev, rbf:rbf, p1:a.p1, jeuDay:jeu, rbDay:rb, totDay:jeu+rb, bank:bk});
+    t.perDay+=jeu+rb; t.jeuDay+=jeu; t.rbDay+=rb; t.nDay+=l.nTot; t.acc+=l.k;
+    t.varD+=l.nTot*s.sd*s.sd*l.b*l.b; t.muDs+=l.nTot*s.tot*l.b;
+    if (bk==null) t.bankOk=false; else t.bank+=bk;
+  });
+  return t;
+}
+
+/* ---------- Calcul Monte-Carlo (dans un Web Worker, ou en secours dans la page) ---------- */
+function workerMain(self){
+  function mk(seed){var a=seed|0;return function(){a=(a+0x6D2B79F5)|0;var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
+  function build(bar, parts, cev, rb, sc){
+    sc=sc||1;
+    var s=bar.slice().sort(function(x,y){return y[1]-x[1];}), k=s.length;
+    var cum=new Float64Array(k), n1=new Float64Array(k), n2=new Float64Array(k), n3=new Float64Array(k);
+    var p1=1/3+cev/1500, q=(1-p1)/2, acc=0, i, m;
+    for(i=0;i<k;i++){
+      m=s[i][0]; acc+=s[i][1]; cum[i]=acc;
+      if(m>=10){ n1[i]=m*sc*parts[0]-1+rb; n2[i]=m*sc*parts[1]-1+rb; n3[i]=m*sc*parts[2]-1+rb; }
+      else { n1[i]=m*sc-1+rb; n2[i]=-1+rb; n3[i]=-1+rb; }
+    }
+    cum[k-1]=Infinity;
+    return {p1:p1, p1q:p1+q, cum:cum, n1:n1, n2:n2, n3:n3};
+  }
+  function qs(a,f){ return a[Math.max(0,Math.min(a.length-1,Math.round(f*(a.length-1))))]; }
+  function sortedCopy(a,k){ var t=new Float32Array(k); for(var i=0;i<k;i++) t[i]=a[i]; t.sort(); return t; }
+  function uniqSorted(arr){ arr.sort(function(a,b){return a-b;}); var o=[]; for(var i=0;i<arr.length;i++) if(!i||arr[i]!==arr[i-1]) o.push(arr[i]); return o; }
+  function bands(grid,G1,k,cols){
+    cols=cols||G1;
+    var o={q025:new Float32Array(cols),q15:new Float32Array(cols),q50:new Float32Array(cols),q85:new Float32Array(cols),q975:new Float32Array(cols),mean:new Float32Array(cols)};
+    var tmp=new Float32Array(k), c, p, sum;
+    for(c=0;c<cols;c++){
+      sum=0; for(p=0;p<k;p++){ var v=grid[p*G1+c]; tmp[p]=v; sum+=v; }
+      o.mean[c]=sum/k; tmp.sort();
+      o.q025[c]=qs(tmp,.025); o.q15[c]=qs(tmp,.15); o.q50[c]=qs(tmp,.5); o.q85[c]=qs(tmp,.85); o.q975[c]=qs(tmp,.975);
+    }
+    return o;
+  }
+  function samples(grid,G1,k,cols){ cols=cols||G1; var out=[], m=Math.min(24,k), p; for(p=0;p<m;p++) out.push(grid.slice(p*G1,p*G1+cols)); return out; }
+  function post(o){ self.postMessage(o); }
+
+  function runFixed(msg){
+    var t0=Date.now(), b=msg.b, nDay=msg.nDay, T=Math.max(1,Math.round(msg.days*nDay));
+    var tab=build(msg.bareme,msg.parts,msg.cev,msg.rb*msg.rake);
+    var drift=msg.bonus/(nDay*b);
+    var p1=tab.p1,p1q=tab.p1q,cum=tab.cum,n1=tab.n1,n2=tab.n2,n3=tab.n3;
+    var probeD=[1,7,msg.dpm||30], probeT=probeD.map(function(d){return Math.max(1,Math.round(d*nDay));});
+    var Tmax=Math.max(T,probeT[2]);
+    var P=msg.paths; if(P*Tmax>msg.budget){ P=Math.max(msg.minPaths, Math.floor(msg.budget/Tmax)); } P=Math.min(P,msg.paths);
+    var G=Math.min(240,T), G1=G+1, g, k;
+    var gridT=new Int32Array(G1); for(g=0;g<G1;g++) gridT[g]=Math.round(g*T/G);
+    var gIdx={}, pIdx={}, cutsA=[];
+    for(g=1;g<G1;g++){ gIdx[gridT[g]]=g; cutsA.push(gridT[g]); }
+    probeT.forEach(function(t,j){ if(t<=T){ pIdx[t]=(pIdx[t]||[]); pIdx[t].push(j); cutsA.push(t); } });
+    cutsA=uniqSorted(cutsA);
+    var cutsB=uniqSorted(probeT.filter(function(t){return t>T;}));
+    var grid=new Float32Array(P*G1), pr=[new Float32Array(P),new Float32Array(P),new Float32Array(P)];
+    var dd=new Float32Array(P), st=new Float32Array(P), sn=new Float32Array(P), mn=new Float32Array(P), fin=new Float32Array(P);
+    var rand=mk(msg.seed), last=Date.now(), partialAt=(P>=500)?300:0, p, ci, seg, u, v, i;
+    for(p=0;p<P;p++){
+      var x=0,hi=0,ddm=0,tt=0,lastPk=0,stm=0,lastNN=0,snm=0,mnm=0;
+      for(ci=0;ci<cutsA.length;ci++){
+        var tgt=cutsA[ci]; seg=tgt-tt;
+        for(;seg>0;seg--){
+          u=rand(); i=0; while(u>cum[i]) i++;
+          v=rand();
+          x+=(v<p1?n1[i]:(v<p1q?n2[i]:n3[i]))+drift; tt++;
+          if(x>hi){ hi=x; if(tt-lastPk>stm) stm=tt-lastPk; lastPk=tt; } else if(hi-x>ddm) ddm=hi-x;
+          if(x>=0){ if(tt-lastNN>snm) snm=tt-lastNN; lastNN=tt; }
+          if(x<mnm) mnm=x;
+        }
+        if(gIdx[tgt]!==undefined) grid[p*G1+gIdx[tgt]]=x*b;
+        if(pIdx[tgt]){ for(var j=0;j<pIdx[tgt].length;j++) pr[pIdx[tgt][j]][p]=x*b; }
+      }
+      if(tt-lastPk>stm) stm=tt-lastPk; if(tt-lastNN>snm) snm=tt-lastNN;
+      dd[p]=ddm*b; st[p]=stm/nDay; sn[p]=snm/nDay; mn[p]=mnm*b; fin[p]=x*b;
+      var y=x;
+      for(ci=0;ci<cutsB.length;ci++){
+        seg=cutsB[ci]-tt;
+        for(;seg>0;seg--){ u=rand(); i=0; while(u>cum[i]) i++; v=rand(); y+=(v<p1?n1[i]:(v<p1q?n2[i]:n3[i]))+drift; tt++; }
+        for(var jj=0;jj<3;jj++) if(probeT[jj]===cutsB[ci]) pr[jj][p]=y*b;
+      }
+      var now=Date.now();
+      if(now-last>120){ last=now; post({type:"progress",id:msg.id,phase:"main",frac:(p+1)/P}); }
+      if(partialAt && p+1===partialAt){ post({type:"partial",id:msg.id,res:summ(partialAt)}); }
+    }
+    function summ(kk){
+      var xs=new Float32Array(G1); for(var q=0;q<G1;q++) xs[q]=gridT[q]/nDay;
+      var f=sortedCopy(fin,kk), d=sortedCopy(dd,kk), s1=sortedCopy(st,kk), s2=sortedCopy(sn,kk), m1=sortedCopy(mn,kk), loss=0, ruin=0, sumF=0, q2;
+      for(q2=0;q2<kk;q2++){ if(fin[q2]<0) loss++; if(msg.bank0+mn[q2]<b) ruin++; sumF+=fin[q2]; }
+      var roi=new Float32Array(kk); for(q2=0;q2<kk;q2++) roi[q2]=(fin[q2]/b)/T-drift-msg.rb*msg.rake;
+      roi.sort();
+      var probes=probeD.map(function(dd_,j){
+        var a=sortedCopy(pr[j],kk), l=0, sm=0; for(var z=0;z<kk;z++){ if(pr[j][z]<0) l++; sm+=pr[j][z]; }
+        return {days:dd_, q05:qs(a,.05), q50:qs(a,.5), q95:qs(a,.95), mean:sm/kk, pLoss:l/kk};
+      });
+      var finals=new Float32Array(kk); for(q2=0;q2<kk;q2++) finals[q2]=fin[q2];
+      return {kind:"fixed", P:kk, Preq:msg.paths, G:G, T:T, nDay:nDay, b:b, x:xs, bands:bands(grid,G1,kk), samples:samples(grid,G1,kk),
+        finals:finals, fin:{q05:qs(f,.05),q50:qs(f,.5),q95:qs(f,.95),min:f[0],max:f[kk-1],mean:sumF/kk,pLoss:loss/kk},
+        dd:{p50:qs(d,.5),p90:qs(d,.9),p99:qs(d,.99),max:d[kk-1]}, st:{p50:qs(s1,.5),p90:qs(s1,.9),max:s1[kk-1]}, sn:{p50:qs(s2,.5),p90:qs(s2,.9),max:s2[kk-1]},
+        ruin:ruin/kk, roi:{q05:qs(roi,.05),q50:qs(roi,.5),q95:qs(roi,.95)}, probes:probes, ms:Date.now()-t0, tournois:kk*Tmax};
+    }
+    post({type:"final",id:msg.id,res:summ(P)});
+  }
+
+  function runPalier(msg){
+    var t0=Date.now(), nDay=msg.nDay, T=Math.max(1,Math.round(msg.days*nDay)), bs=msg.levels, rbv=msg.rb*msg.rake;
+    var tabs=bs.map(function(b,i){return build(msg.bareme,msg.parts,msg.cevs[i],msg.rbs[i]*msg.rake);});
+    var up=msg.up, dn=msg.dn;
+    var P=msg.paths; if(P*T>msg.budget){ P=Math.max(msg.minPaths, Math.floor(msg.budget/T)); } P=Math.min(P,msg.paths);
+    var G=Math.min(240,T), G1=G+1, g, cuts=[];
+    var gridT=new Int32Array(G1); for(g=0;g<G1;g++) gridT[g]=Math.round(g*T/G);
+    for(g=1;g<G1;g++) cuts.push(gridT[g]);
+    cuts=uniqSorted(cuts);
+    var gIdx={}; for(g=1;g<G1;g++) gIdx[gridT[g]]=g;
+    var grid=new Float32Array(P*G1), fin=new Float32Array(P);
+    var reach=[new Float32Array(P),new Float32Array(P),new Float32Array(P)], drops=[new Float32Array(P),new Float32Array(P),new Float32Array(P)];
+    var lvT=[new Float32Array(P),new Float32Array(P),new Float32Array(P)], ruinA=new Uint8Array(P);
+    var rand=mk(msg.seed), last=Date.now(), partialAt=(P>=500)?300:0;
+    var L=0, ct, cum, p1, p1q, n1, n2, n3, bL;
+    function sw(){ ct=tabs[L]; cum=ct.cum; p1=ct.p1; p1q=ct.p1q; n1=ct.n1; n2=ct.n2; n3=ct.n3; bL=bs[L]; }
+    var p, ci, seg, u, v, i;
+    for(p=0;p<P;p++){
+      var B=msg.bank0, tt=0, dead=false, lv0=0,lv1=0,lv2=0, rc=[-1,-1,-1], dr=[0,0,0];
+      L=0; while(L<2 && B>=up[L]) L++;
+      for(i=0;i<=L;i++) rc[i]=0;
+      sw(); grid[p*G1]=B;
+      for(ci=0;ci<cuts.length;ci++){
+        var tgt=cuts[ci]; seg=tgt-tt;
+        if(dead){ tt=tgt; }
+        else {
+          for(;seg>0;seg--){
+            u=rand(); i=0; while(u>cum[i]) i++;
+            v=rand();
+            B+=(v<p1?n1[i]:(v<p1q?n2[i]:n3[i]))*bL; tt++;
+            if(L===0) lv0++; else if(L===1) lv1++; else lv2++;
+            if(L<2 && B>=up[L]){ do{ L++; if(rc[L]<0) rc[L]=tt; }while(L<2 && B>=up[L]); sw(); }
+            else if(L>0 && B<dn[L-1]){ do{ dr[L]++; L--; }while(L>0 && B<dn[L-1]); sw(); }
+            if(B<bs[0]){ dead=true; tt+=seg-1; break; }
+          }
+        }
+        grid[p*G1+gIdx[tgt]]=B;
+      }
+      fin[p]=B; ruinA[p]=dead?1:0;
+      for(i=0;i<3;i++){ reach[i][p]=rc[i]; drops[i][p]=dr[i]; }
+      lvT[0][p]=lv0; lvT[1][p]=lv1; lvT[2][p]=lv2;
+      var now=Date.now();
+      if(now-last>120){ last=now; post({type:"progress",id:msg.id,phase:"main",frac:(p+1)/P}); }
+      if(partialAt && p+1===partialAt){ post({type:"partial",id:msg.id,res:summ(partialAt)}); }
+    }
+    function summ(kk){
+      var xs=new Float32Array(G1); for(var q=0;q<G1;q++) xs[q]=gridT[q]/nDay;
+      var f=sortedCopy(fin,kk), ruin=0, q2, lev=[];
+      for(q2=0;q2<kk;q2++) if(ruinA[q2]) ruin++;
+      for(var l=1;l<=2;l++){
+        var times=[], dropped=0, nd=0, tot=0;
+        for(q2=0;q2<kk;q2++){ if(reach[l][q2]>=0){ times.push(reach[l][q2]/nDay); tot++; if(drops[l][q2]>0){ dropped++; } nd+=drops[l][q2]; } }
+        times.sort(function(a,c){return a-c;});
+        var mean=0; for(q2=0;q2<times.length;q2++) mean+=times[q2];
+        lev.push({level:bs[l], reached:tot/kk, median:times.length?times[Math.floor(times.length/2)]:null, mean:times.length?mean/times.length:null,
+                  dropPct:tot?dropped/tot:null, dropAvg:tot?nd/tot:null});
+      }
+      var down1=0, time=[0,0,0];
+      for(q2=0;q2<kk;q2++){ if(drops[1][q2]>0) down1++; for(var z=0;z<3;z++) time[z]+=lvT[z][q2]/nDay; }
+      for(var z2=0;z2<3;z2++) time[z2]/=kk;
+      var finals=new Float32Array(kk); for(q2=0;q2<kk;q2++) finals[q2]=fin[q2];
+      return {kind:"palier", P:kk, Preq:msg.paths, G:G, T:T, nDay:nDay, x:xs, bands:bands(grid,G1,kk), samples:samples(grid,G1,kk), finals:finals,
+        fin:{q05:qs(f,.05),q50:qs(f,.5),q95:qs(f,.95),min:f[0],max:f[kk-1]}, ruin:ruin/kk, lev:lev, down1:down1/kk, time:time, ms:Date.now()-t0, tournois:kk*T};
+    }
+    post({type:"final",id:msg.id,res:summ(P)});
+  }
+
+  function runVision(msg){
+    var t0=Date.now(), L=msg.vlevels, days=msg.days, dpm=msg.dpm||30, Dsim=Math.max(days,dpm), nTot=msg.nDay, rakeb=msg.rake;
+    var tabs=L.map(function(l){var rk=l.rk||rakeb; return build(msg.bareme,msg.parts,l.cev,l.rb*rk,(1-rk)/(1-rakeb));});
+    var P=msg.paths, perPath=nTot*Dsim; if(P*perPath>msg.budget){ P=Math.max(msg.minPaths, Math.floor(msg.budget/perPath)); } P=Math.min(P,msg.paths);
+    var G=240, gdA=[], g, j;
+    for(g=0;g<=G;g++) gdA.push(Math.round(days*g/G*1e6)/1e6);
+    [1,7,dpm].forEach(function(d){ gdA.push(d); });
+    gdA.push(days);
+    var gd=uniqSorted(gdA).filter(function(d){return d<=Dsim+1e-9;});
+    var G1=gd.length, iD=0; for(g=0;g<G1;g++) if(gd[g]<=days+1e-9) iD=g;
+    var cnt=L.map(function(l){ var a=new Int32Array(G1); for(g=0;g<G1;g++) a[g]=Math.round(gd[g]*l.nTot); return a; });
+    var pIdx=[1,7,dpm].map(function(d){ for(var q=0;q<G1;q++) if(Math.abs(gd[q]-d)<1e-9) return q; return -1; });
+    var grid=new Float32Array(P*G1), rand=mk(msg.seed), last=Date.now(), partialAt=(P>=500)?300:0, p, u, v, i;
+    for(p=0;p<P;p++){
+      for(j=0;j<L.length;j++){
+        var ct=tabs[j], cum=ct.cum, p1=ct.p1, p1q=ct.p1q, n1=ct.n1, n2=ct.n2, n3=ct.n3, b=L[j].b, x=0, tt=0, cj=cnt[j];
+        for(g=1;g<G1;g++){
+          var seg=cj[g]-tt;
+          for(;seg>0;seg--){ u=rand(); i=0; while(u>cum[i]) i++; v=rand(); x+=(v<p1?n1[i]:(v<p1q?n2[i]:n3[i])); }
+          tt=cj[g]; grid[p*G1+g]+=x*b;
+        }
+      }
+      if(msg.bonus){ for(g=1;g<G1;g++) grid[p*G1+g]+=msg.bonus*gd[g]; }
+      var now=Date.now();
+      if(now-last>120){ last=now; post({type:"progress",id:msg.id,phase:"main",frac:(p+1)/P}); }
+      if(partialAt && p+1===partialAt){ post({type:"partial",id:msg.id,res:summ(partialAt)}); }
+    }
+    function summ(kk){
+      var C=iD+1, xs=new Float32Array(C), q, c;
+      for(q=0;q<C;q++) xs[q]=gd[q];
+      var fin=new Float32Array(kk), dd=new Float32Array(kk), st=new Float32Array(kk), sn=new Float32Array(kk), mn=new Float32Array(kk);
+      var pr=[new Float32Array(kk),new Float32Array(kk),new Float32Array(kk)], loss=0, ruin=0, sumF=0;
+      for(q=0;q<kk;q++){
+        var hi=0,ddm=0,lastPk=0,stm=0,lastNN=0,snm=0,mnm=0;
+        for(c=1;c<C;c++){
+          var xv=grid[q*G1+c];
+          if(xv>hi){ hi=xv; if(gd[c]-gd[lastPk]>stm) stm=gd[c]-gd[lastPk]; lastPk=c; } else if(hi-xv>ddm) ddm=hi-xv;
+          if(xv>=0){ if(gd[c]-gd[lastNN]>snm) snm=gd[c]-gd[lastNN]; lastNN=c; }
+          if(xv<mnm) mnm=xv;
+        }
+        if(gd[C-1]-gd[lastPk]>stm) stm=gd[C-1]-gd[lastPk]; if(gd[C-1]-gd[lastNN]>snm) snm=gd[C-1]-gd[lastNN];
+        fin[q]=grid[q*G1+iD]; dd[q]=ddm; st[q]=stm; sn[q]=snm; mn[q]=mnm;
+        if(fin[q]<0) loss++; if(msg.bank0+mnm<1) ruin++; sumF+=fin[q];
+        for(var z=0;z<3;z++) pr[z][q]=pIdx[z]>=0?grid[q*G1+pIdx[z]]:0;
+      }
+      var f=sortedCopy(fin,kk), d=sortedCopy(dd,kk), s1=sortedCopy(st,kk), s2=sortedCopy(sn,kk);
+      var probes=[1,7,dpm].map(function(dd_,z){
+        var a=sortedCopy(pr[z],kk), l=0, sm=0; for(var w=0;w<kk;w++){ if(pr[z][w]<0) l++; sm+=pr[z][w]; }
+        return {days:dd_, q05:qs(a,.05), q50:qs(a,.5), q95:qs(a,.95), mean:sm/kk, pLoss:l/kk};
+      });
+      return {kind:"vision", P:kk, Preq:msg.paths, G:iD, T:Math.round(nTot*days), nDay:nTot, x:xs, bands:bands(grid,G1,kk,C), samples:samples(grid,G1,kk,C),
+        finals:f.slice(0), fin:{q05:qs(f,.05),q50:qs(f,.5),q95:qs(f,.95),min:f[0],max:f[kk-1],mean:sumF/kk,pLoss:loss/kk},
+        dd:{p50:qs(d,.5),p90:qs(d,.9),p99:qs(d,.99),max:d[kk-1]}, st:{p50:qs(s1,.5),p90:qs(s1,.9),max:s1[kk-1]}, sn:{p50:qs(s2,.5),p90:qs(s2,.9),max:s2[kk-1]},
+        ruin:ruin/kk, roi:null, probes:probes, ms:Date.now()-t0, tournois:kk*nTot*Dsim};
+    }
+    post({type:"final",id:msg.id,res:summ(P)});
+  }
+
+  function runSample(msg){
+    var Ns=[100,300,1000,3000,10000], S=msg.sampleP, tab=build(msg.bareme,msg.parts,msg.cev,msg.rb*msg.rake);
+    var p1=tab.p1,p1q=tab.p1q,cum=tab.cum,n1=tab.n1,n2=tab.n2,n3=tab.n3, rand=mk(msg.seed+99991);
+    var res=Ns.map(function(){return new Float32Array(S);}), last=Date.now(), p, j, tt, x, u, v, i;
+    for(p=0;p<S;p++){
+      x=0; tt=0;
+      for(j=0;j<Ns.length;j++){
+        for(;tt<Ns[j];tt++){ u=rand(); i=0; while(u>cum[i]) i++; v=rand(); x+=(v<p1?n1[i]:(v<p1q?n2[i]:n3[i])); }
+        res[j][p]=x;
+      }
+      var now=Date.now(); if(now-last>150){ last=now; post({type:"progress",id:msg.id,phase:"sample",frac:(p+1)/S}); }
+    }
+    var rows=Ns.map(function(N,j){
+      var a=new Float32Array(S), l=0; for(var z=0;z<S;z++){ a[z]=res[j][z]/N; if(res[j][z]<0) l++; }
+      a.sort(); return {N:N, pLoss:l/S, q05:qs(a,.05), q50:qs(a,.5), q95:qs(a,.95)};
+    });
+    post({type:"sample",id:msg.id,rows:rows,key:msg.sampleKey});
+  }
+
+  self.onmessage=function(e){
+    var msg=e.data;
+    if(msg.type!=="run") return;
+    if(msg.mode==="palier") runPalier(msg); else if(msg.mode==="vision") runVision(msg); else runFixed(msg);
+    if(msg.doSample) runSample(msg);
+    post({type:"done",id:msg.id});
+  };
+}
+
+/* ---------- Dessin ---------- */
+function colors(){
+  var cs=getComputedStyle(document.documentElement);
+  function g(n){ return (cs.getPropertyValue(n)||"").trim()||"#888888"; }
+  return {card:g("--card"),ink:g("--ink"),mute:g("--mute"),line:g("--line"),accent:g("--accent"),good:g("--good"),bad:g("--bad"),warn:g("--warn")};
+}
+function rgba(hex,a){
+  var h=String(hex).replace("#",""); if(h.length===3) h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);
+  if(h.length!==6) return hex;
+  return "rgba("+parseInt(h.substr(0,2),16)+","+parseInt(h.substr(2,2),16)+","+parseInt(h.substr(4,2),16)+","+a+")";
+}
+function niceTicks(lo,hi,target){
+  var span=hi-lo; if(!(span>0)){ span=Math.abs(hi)||1; lo-=span/2; hi+=span/2; span=hi-lo; }
+  var raw=span/target, p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p;
+  var st=(f<1.5?1:(f<2.25?2:(f<3.5?2.5:(f<7.5?5:10))))*p;
+  var a=Math.ceil(lo/st-1e-9)*st, out=[];
+  for(var v=a; v<=hi+st*1e-9; v+=st) out.push(Math.abs(v)<st*1e-9?0:v);
+  return {ticks:out, step:st};
+}
+function fmtTick(v,step){
+  var a=Math.abs(v);
+  if (a>=10000) return num(v/1000, a>=100000?0:1)+"k";
+  var d=step>=1?0:Math.min(4,Math.ceil(-Math.log10(step)-1e-9));
+  return num(v,d);
+}
+function setupCanvas(cv){
+  var dpr=window.devicePixelRatio||1, W=cv.clientWidth||600, H=cv.clientHeight||320;
+  var pw=Math.round(W*dpr), ph=Math.round(H*dpr);
+  if(cv.width!==pw||cv.height!==ph){ cv.width=pw; cv.height=ph; }
+  var ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
+  return {ctx:ctx,W:W,H:H};
+}
+var ML=60, MR=12;
+var FONT='12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+
+function drawChart(cv,o){
+  var su=setupCanvas(cv), ctx=su.ctx, W=su.W, H=su.H, c=colors(), k=o.k||1;
+  var ml=ML, mr=MR, mt=10, mb=38, pw=W-ml-mr, ph=H-mt-mb, xs=o.x, n=xs.length, i, j;
+  if(n<2||pw<40||ph<40) return;
+  var x0=xs[0], x1=xs[n-1], ylo=Infinity, yhi=-Infinity;
+  function ext(a){ for(var q=0;q<a.length;q++){ var v=a[q]*k; if(v<ylo) ylo=v; if(v>yhi) yhi=v; } }
+  if(o.showBands){ ext(o.bands.q025); ext(o.bands.q975); } else { ext(o.bands.q15); ext(o.bands.q85); }
+  if(o.showPaths) o.samples.forEach(ext);
+  if(o.ev){ ext([o.ev.y0,o.ev.y1]); }
+  (o.hl||[]).forEach(function(h){ var v=h.v*k; if(v<ylo) ylo=v; if(v>yhi) yhi=v; });
+  if(o.zero){ if(0<ylo) ylo=0; if(0>yhi) yhi=0; }
+  var pad=(yhi-ylo)*0.06||1; ylo-=pad; yhi+=pad;
+  var yt=niceTicks(ylo,yhi,6), xt=niceTicks(x0,x1,6);
+  function X(v){ return ml+(v-x0)/(x1-x0)*pw; }
+  function Y(v){ return mt+ph-(v*k-ylo)/(yhi-ylo)*ph; }
+  ctx.font=FONT; ctx.textBaseline="middle";
+  // grille et étiquettes
+  ctx.lineWidth=1;
+  yt.ticks.forEach(function(t){
+    var y=mt+ph-(t-ylo)/(yhi-ylo)*ph; if(y<mt-1||y>mt+ph+1) return;
+    ctx.strokeStyle=c.line; ctx.beginPath(); ctx.moveTo(ml,y); ctx.lineTo(ml+pw,y); ctx.stroke();
+    ctx.fillStyle=c.mute; ctx.textAlign="right"; ctx.fillText(fmtTick(t,yt.step),ml-6,y);
+  });
+  xt.ticks.forEach(function(t){
+    var x=X(t); if(x<ml-1||x>ml+pw+1) return;
+    ctx.strokeStyle=c.line; ctx.beginPath(); ctx.moveTo(x,mt); ctx.lineTo(x,mt+ph); ctx.stroke();
+    ctx.fillStyle=c.mute; ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText(fmtTick(t,xt.step),x,mt+ph+5);
+  });
+  ctx.textBaseline="middle";
+  ctx.fillStyle=c.mute; ctx.textAlign="center"; ctx.textBaseline="bottom"; ctx.fillText(o.xTitle||"",ml+pw/2,H-2);
+  ctx.save(); ctx.translate(9,mt+ph/2); ctx.rotate(-Math.PI/2); ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(o.yTitle||"",0,0); ctx.restore();
+  ctx.textBaseline="middle";
+  ctx.save(); ctx.beginPath(); ctx.rect(ml,mt,pw,ph); ctx.clip();
+  function band(lo,hi,col){
+    ctx.beginPath();
+    for(i=0;i<n;i++){ var xx=X(xs[i]), yy=Y(hi[i]); if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy); }
+    for(i=n-1;i>=0;i--) ctx.lineTo(X(xs[i]),Y(lo[i]));
+    ctx.closePath(); ctx.fillStyle=col; ctx.fill();
+  }
+  function line(a,col,w,dash){
+    ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.lineWidth=w; ctx.strokeStyle=col;
+    for(i=0;i<n;i++){ var xx=X(xs[i]), yy=Y(a[i]); if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  if(o.showBands){ band(o.bands.q025,o.bands.q975,rgba(c.accent,0.14)); }
+  band(o.bands.q15,o.bands.q85,rgba(c.accent,0.26));
+  if(o.showPaths){ o.samples.forEach(function(s){ line(s,rgba(c.ink,0.28),1); }); }
+  if(o.zero){ var yz=Y(0); ctx.strokeStyle=c.mute; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(ml,yz); ctx.lineTo(ml+pw,yz); ctx.stroke(); }
+  (o.hl||[]).forEach(function(h){
+    var y=Y(h.v); ctx.strokeStyle=h.color||c.warn; ctx.lineWidth=1; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(ml,y); ctx.lineTo(ml+pw,y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=h.color||c.warn; ctx.textAlign="right"; ctx.textBaseline="bottom"; ctx.fillText(h.label,ml+pw-4,y-2);
+  });
+  line(o.bands.q50,c.accent,2);
+  if(o.ev){ ctx.beginPath(); ctx.setLineDash([7,5]); ctx.lineWidth=2; ctx.strokeStyle=c.warn; ctx.moveTo(X(x0),Y(o.ev.y0)); ctx.lineTo(X(x1),Y(o.ev.y1)); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.restore();
+  ctx.strokeStyle=c.mute; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(ml,mt); ctx.lineTo(ml,mt+ph); ctx.lineTo(ml+pw,mt+ph); ctx.stroke();
+  // repère au survol
+  if(o.hover!=null && o.hover>=0 && o.hover<n){
+    var hx=X(xs[o.hover]);
+    ctx.strokeStyle=c.ink; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(hx,mt); ctx.lineTo(hx,mt+ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=c.accent; ctx.beginPath(); ctx.arc(hx,Y(o.bands.q50[o.hover]),4,0,6.2832); ctx.fill();
+    var lines=o.tip?o.tip(o.hover):[];
+    if(lines.length){
+      ctx.font=FONT; var bw=0; lines.forEach(function(s){ var w=ctx.measureText(s).width; if(w>bw) bw=w; });
+      bw+=16; var bh=lines.length*16+10, bx=hx+10; if(bx+bw>W-4) bx=hx-10-bw; if(bx<4) bx=4;
+      ctx.fillStyle=rgba(c.card,0.95); ctx.strokeStyle=c.line; ctx.lineWidth=1; ctx.fillRect(bx,mt+4,bw,bh); ctx.strokeRect(bx,mt+4,bw,bh);
+      ctx.fillStyle=c.ink; ctx.textAlign="left"; ctx.textBaseline="middle";
+      lines.forEach(function(s,q){ ctx.fillText(s,bx+8,mt+4+13+q*16); });
+    }
+  }
+}
+
+function drawHist(cv,o){
+  var su=setupCanvas(cv), ctx=su.ctx, W=su.W, H=su.H, c=colors(), k=o.k||1, vals=o.vals, n=vals.length;
+  var ml=14, mr=14, mt=14, mb=34, pw=W-ml-mr, ph=H-mt-mb;
+  if(n<2||pw<40||ph<30) return;
+  var s=new Float32Array(n); for(var q=0;q<n;q++) s[q]=vals[q]*k; s.sort();
+  var lo=s[Math.round(.005*(n-1))], hi=s[Math.round(.995*(n-1))];
+  if(!(hi>lo)){ lo-=1; hi+=1; }
+  var N=40, w=(hi-lo)/N, cnt=new Array(N).fill(0), out=0;
+  for(q=0;q<n;q++){ var i=Math.floor((s[q]-lo)/w); if(s[q]>hi||s[q]<lo){ out++; continue; } if(i>=N) i=N-1; if(i<0) i=0; cnt[i]++; }
+  var mx=Math.max.apply(null,cnt)||1, bw=pw/N;
+  function X(v){ return ml+(v-lo)/(hi-lo)*pw; }
+  ctx.font=FONT;
+  for(var b=0;b<N;b++){
+    var h=ph*cnt[b]/mx, edge=lo+(b+1)*w;
+    ctx.fillStyle=edge<=0?rgba(c.bad,0.8):rgba(c.accent,0.8);
+    ctx.fillRect(ml+b*bw+1, mt+ph-h, bw-2, h);
+  }
+  ctx.strokeStyle=c.mute; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(ml,mt+ph); ctx.lineTo(ml+pw,mt+ph); ctx.stroke();
+  var xt=niceTicks(lo,hi,5);
+  ctx.fillStyle=c.mute; ctx.textAlign="center"; ctx.textBaseline="top";
+  xt.ticks.forEach(function(t){ var x=X(t); if(x<ml||x>ml+pw) return; ctx.fillText(fmtTick(t,xt.step),x,mt+ph+5); });
+  function vline(v,col,label,dy){
+    if(v<lo||v>hi) return; var x=X(v); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(x,mt); ctx.lineTo(x,mt+ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=col; ctx.textBaseline="top"; ctx.textAlign=(x>W*0.7)?"right":"left"; ctx.fillText(label,x+(x>W*0.7?-4:4),mt+dy);
+  }
+  vline(0,c.mute,"0",0);
+  if(o.mean!=null) vline(o.mean*k,c.warn,"moyenne",14);
+  o.outside = out;
+}
+
+/* ---------- Interface : contrôles ---------- */
+var FM = {
+  nS:function(v){return num(v)+" par jour";}, nM:function(v){return num(v)+" par jour";}, nX:function(v){return num(v)+" par jour";},
+  nC:function(v){return String(v);}, days:function(v){return v+(v>1?" jours":" jour");}, paths:function(v){return num(v);},
+  rb:function(v){return v+" % du rake";}, bonus:function(v){return v+" € par jour";}, bank:function(v){return num(v)+" €";},
+  sd:function(v){return num(v)+" jetons";}, pct:function(v){return v+" %";}, prim:function(v){return v+" € par mois";},
+  rest:function(v){return num(v)+" points";}, dpm:function(v){return v+" jours";}, r2coef:function(v){return num(v,2)+" x";}, r2cev:function(v){return num(v);}, r2rake:function(v){return num(v,1)+" %";}, shareS:function(v){return v+" %";}, sS0:function(v){return v+" %";}, sSM:function(v){return v+" %";}, dctv:function(v){return v+" %";}, dette:function(v){return num(v)+" €";}, mcy:function(v){return v+" € par an";}, mpa:function(v){return String(v);}, mN:function(v){return num(v);},
+  cl1:function(v){return num(v);}, cl2:function(v){return num(v);}, cl5:function(v){return num(v);}, cl10:function(v){return num(v);}
+};
+function fmtOf(c){
+  if (c.vk){ var t=c.vk.charAt(0); return t==="k" ? function(v){return v+" compte"+(v>1?"s":"");} : (t==="n" ? function(v){return num(v)+" par jour";} : function(v){return num(v);}); }
+  return FM[c.k];
+}
+function volHint(who){
+  var r = D && D.comptes && D.comptes[who] && D.comptes[who].rythme;
+  if (r && r.par_jour_moyenne) return "Mesuré : "+num(r.par_jour_moyenne)+" par jour (moyenne de "+r.jours_pleins+" jours pleins), "+num(r.par_heure,0)+" par heure de jeu.";
+  return who==="simon" ? "La nuit : 500 à 600 par 12 h." : "Le jour : environ 800.";
+}
+var CTL = {
+  g_ess:[
+    {k:"nS",t:"Tournois par jour, compte de Simon",min:0,max:900,step:10,h:volHint("simon")},
+    {k:"nM",t:"Tournois par jour, compte de Mathieu",min:0,max:1200,step:10,h:volHint("mathieu")}
+  ],
+  g_dpm:[
+    {k:"dpm",t:"Jours de jeu par mois",min:10,max:30,step:1,h:"Le robot ne joue pas tous les jours (nuit vide, panne, jour off) : 26 par défaut. Tous les gains par mois en dépendent."}
+  ],
+  g_vol:[
+    {k:"nC",t:"Nombre de comptes",min:1,max:6,step:1,h:"1 = Simon seul, 2 = Simon et Mathieu, 3 et plus = comptes en plus."},
+    {k:"nX",t:"Tournois par jour, chaque compte en plus",min:0,max:1200,step:10,h:"Pour le 3e compte et les suivants."},
+    {k:"view",t:"Comptes affichés",sel:[["all","Tous ensemble"],["simon","Simon seul"],["math","Mathieu seul"]],h:"Les graphiques et les chiffres suivent ce choix."}
+  ],
+  g_vis:[
+    {k:"vk5a",vk:"k5",t:"Comptes à 5 €",min:0,max:6,step:1,h:""},
+    {k:"vk5b",vk:"n5",t:"Tournois par jour et par compte, 5 €",min:0,max:1200,step:10,h:""},
+    {k:"vk5c",vk:"c5",t:"cEV à 5 €",min:-30,max:150,step:1,h:"Jamais joué : pas prouvé gagnant. 40 est une hypothèse, à ± 20 près au moins."},
+    {k:"vk2a",vk:"k2",t:"Comptes à 2 €",min:0,max:6,step:1,h:""},
+    {k:"vk2b",vk:"n2",t:"Tournois par jour et par compte, 2 €",min:0,max:1200,step:10,h:""},
+    {k:"vk2c",vk:"c2",t:"cEV à 2 €",min:-30,max:150,step:1,h:"Part de la valeur mesurée (73). Objectifs à comparer : 80, puis 90 (tableau plus bas).",mv:"2"},
+    {k:"vk1a",vk:"k1",t:"Comptes à 1 €",min:0,max:6,step:1,h:""},
+    {k:"vk1b",vk:"n1",t:"Tournois par jour et par compte, 1 €",min:0,max:1200,step:10,h:""},
+    {k:"vk1c",vk:"c1",t:"cEV à 1 €",min:-30,max:150,step:1,h:"Mesuré : 81.",mv:"1"}
+  ],
+  g_dur:[
+    {k:"days",t:"Jours de jeu simulés",min:1,max:365,step:1,h:"26 = un mois de jeu. Jusqu'à 1 an."},
+    {k:"paths",t:"Nombre de trajectoires",min:200,max:10000,step:100,h:"Plus il y en a, plus les chiffres sont stables. Le calcul se réduit tout seul si c'est trop lourd."}
+  ],
+  g_rb:[
+    {k:"rb",t:"Rakeback manuel",min:0,max:40,step:1,h:"Part des frais rendue en cash (les frais font 7 % de la mise). Star 4 = 10 %, Star 5 = 15 %, Crack = 25 %, Suprême = 40 %. Sert quand « Manuel » est choisi."}
+  ],
+  g_mon:[
+    {k:"bonus",t:"Bonus classement estimé (par jour de jeu)",min:0,max:60,step:1,h:"Tous comptes ensemble, en euros de tickets par jour. Le 28/10 : 1er 2 à 5 € = 30 T€, 2e 20 T€, 3e 15 T€ ; 1 € : 1er 10 T€, 2e 7 T€."},
+    {k:"bank",t:"Bankroll de départ",min:10,max:3000,step:10,h:"Sert au risque de ruine et aux paliers."}
+  ],
+  g_pal:[
+    {k:"up1",t:"Monter en 2 € à",num:true,min:2,max:5000,h:"Bankroll en euros."},
+    {k:"dn1",t:"Redescendre en 1 € sous",num:true,min:0,max:5000,h:""},
+    {k:"up2",t:"Monter en 5 € à",num:true,min:2,max:10000,h:""},
+    {k:"dn2",t:"Redescendre en 2 € sous",num:true,min:0,max:10000,h:""}
+  ],
+  g_lv:[
+    {k:"cl1",t:"cEV à 1 €",min:-30,max:150,step:1,lv:1,m:true},
+    {k:"cl2",t:"cEV à 2 €",min:-30,max:150,step:1,lv:2,m:true},
+    {k:"cl5",t:"cEV à 5 €",min:-30,max:150,step:1,lv:5,m:true},
+    {k:"cl10",t:"cEV à 10 €",min:-30,max:150,step:1,lv:10,m:true}
+  ],
+  g_adv:[
+    {k:"sd",t:"Dispersion des jetons gagnés par tournoi",min:200,max:900,step:10,h:"Sert seulement à dire avec quelle précision on mesure la cEV. Mesuré sur nos tournois : environ 400."}
+  ],
+  g_fid:[
+    {k:"rest",t:"Points qu'il reste pour finir Star 5 ce mois-ci",min:0,max:1000,step:10,h:"Chez Simon le 30/10 : 34 paliers de 20 points = 680 points."}
+  ],
+  g_sca:[
+    {k:"pct",t:"Part reversée à chaque titulaire (en % de ses gains)",min:0,max:30,step:1,h:"Un titulaire = un compte en plus de Simon et Mathieu."},
+    {k:"prim",t:"Prime par mois pour chaque compte de titulaire",min:0,max:200,step:5,h:"En plus de la part. 30 € par mois."},
+    {k:"mcy",t:"Coût d'une machine par an",min:0,max:500,step:5,h:"60 € par an. Hypothèse non vérifiée."},
+    {k:"mpa",t:"Machines par compte",min:0,max:3,step:1,h:"1 machine par compte."},
+    {k:"sS0",t:"Part de Simon sur SON compte",min:0,max:100,step:5,h:"Règle du 30/10 : 95 % pour Simon, 5 % pour Mathieu (avant la dette CTV)."},
+    {k:"sSM",t:"Part de Simon sur les comptes de Mathieu",min:0,max:100,step:5,h:"Règle du 30/10 : 50 / 50 (avant la dette CTV). Compte de Mathieu et comptes de sa famille."},
+    {k:"dctv",t:"Remboursement de la dette CTV (en % de tous les gains)",min:0,max:40,step:5,h:"30/10 : 20 % de tous les gains vont à Mathieu tant que la dette n'est pas remboursée. Ton compte : 75 / 25, ses comptes : 30 / 70. 0 = dette finie."},
+    {k:"dette",t:"Dette CTV restant à rembourser",min:0,max:10000,step:50,h:"4 000 € : chiffre fixé avec Mathieu le 31/10. Remboursé au fur et à mesure des retraits, jusqu’à zéro."},
+    {k:"spm",t:"SpinPro Max (300 € par mois)",chk:true,h:""}
+  ],
+  g_room:[
+    {k:"room2",t:"Ajouter une room en plus",chk:true},
+    {k:"r2coef",t:"Volume de la 2e room (x le volume de la 1re)",min:0.1,max:2,step:0.05,h:"0,8 = un peu moins que le double au total. Mode « Un seul niveau » seulement."},
+    {k:"r2cev",t:"cEV dans la 2e room",min:-30,max:150,step:1,h:"Par défaut la même que la 1re. À toi de la baisser si les adversaires sont plus forts."},
+    {k:"r2rake",t:"Frais de la 2e room (% de la mise)",min:3,max:12,step:0.5,h:"7 % chez PMU. La 2e room est affichée à part dans le total."}
+  ],
+  g_mult:[
+    {k:"mN",t:"Nombre de tournois N",min:100,max:100000,step:100,h:"De 100 à 100 000."}
+  ]
+};
+var NOSIM = {pct:1,prim:1,mcy:1,mpa:1,shareS:1,sS0:1,sSM:1,dctv:1,dette:1,spm:1,sd:1,unit:1,showPaths:1,showBands:1,rest:1,mN:1};
+function buildControls(){
+  Object.keys(CTL).forEach(function(box){
+    var h="";
+    CTL[box].forEach(function(c){
+      var id="c_"+c.k;
+      if (c.sel){
+        h+='<label class="ctl"><span class="lt">'+c.t+'</span><select id="'+id+'">'+c.sel.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join("")+'</select>'+(c.h?'<span class="hint">'+esc(c.h)+'</span>':'')+'</label>';
+      } else if (c.chk){
+        h+='<label class="ctl"><span class="lt"><span>'+c.t+'</span><input type="checkbox" id="'+id+'"></span></label>';
+      } else if (c.num){
+        h+='<label class="ctl"><span class="lt">'+c.t+'</span><input type="number" id="'+id+'" min="'+c.min+'" max="'+c.max+'" step="1" inputmode="numeric">'+(c.h?'<span class="hint">'+esc(c.h)+'</span>':'')+'</label>';
+      } else {
+        h+='<label class="ctl"><span class="lt">'+c.t+' <b id="v_'+c.k+'"></b></span><input type="range" id="'+id+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'">'+(c.h?'<span class="hint">'+esc(c.h)+'</span>':'')+((c.m||c.mv)?'<span class="meas" id="m_'+c.k+'"></span>':'')+'</label>';
+      }
+    });
+    $(box).innerHTML=h;
+  });
+}
+function volStatus(){                                         // statut que le volume du premier compte actif donnerait
+  var accs=accountsList().filter(function(a){return a.n>0;});
+  if(!accs.length) return null;
+  var a=accs[0], st=starOf(rakeMonth(a.b,a.n));
+  return {name:st.name, rate:st.rate, who:a.name, b:a.b, n:a.n};
+}
+function getK(c){
+  if (c.lv) return S.cev[c.lv];
+  if (c.vk) return S.vis[c.vk];
+  if (c.k==="rbAuto") return S.rbAuto?"1":"0";
+  return S[c.k];
+}
+function syncDom(){
+  Object.keys(CTL).forEach(function(box){
+    CTL[box].forEach(function(c){
+      var el=$("c_"+c.k); if(!el) return;
+      var v=getK(c);
+      if(c.chk) el.checked=!!v; else el.value=v;
+      var lab=$("v_"+c.k); if(lab){ var f=fmtOf(c); lab.textContent=f?f(v):v; }
+      if (c.mv){ var mm=$("m_"+c.k); if(mm) mm.textContent=measLabel(c.mv); }
+    });
+  });
+  var cv=S.cev[S.b];
+  $("cev").value=cv; $("v_cev").textContent=num(cv,Math.abs(cv-Math.round(cv))<0.05?0:1);
+  var m=mom(cv,false);
+  $("roi").value=(m.ev*100).toFixed(1); $("v_roi").textContent=num(m.ev*100,1)+NB+"%";
+  $("roiTot").textContent="Rakeback à part : +"+num(m.rb*100,2)+" % de la mise, soit "+num(m.tot*100,1)+" % au total. Bouger la cEV ou le ROI ne change pas le rakeback.";
+  $("m_cev").textContent=measLabel(S.b);
+  [[ "m_cl1",1],["m_cl2",2],["m_cl5",5],["m_cl10",10]].forEach(function(a){ var e=$(a[0]); if(e) e.textContent=measLabel(a[1]); });
+  var rbe=rbEff(), vs=volStatus();
+  var sb=$("segRb").children;
+  sb[0].textContent="Selon mon volume"+(vs?" : "+vs.name+", "+num(vs.rate*100,0)+" %":"");
+  sb[1].textContent="Manuel : "+S.rb+" %";
+  sb[0].className=S.rbAuto?"on":""; sb[1].className=S.rbAuto?"":"on";
+  $("rbNow").textContent = S.rbAuto ? "Rakeback appliqué : "+num(rbe*100,1)+" % des frais. Statut calculé d'après ton volume"+(vs?" ("+vs.who+" : "+vs.name+")":"")+". Il faut tenir ce volume tout le trimestre pour garder Crack ; les premiers mois donnent moins." : "Rakeback appliqué : "+num(rbe*100,1)+" % des frais (réglage manuel, 10 % = Star 4 aujourd'hui chez Simon).";
+  var vt=visLevels(), vk=0, vn=0; vt.forEach(function(l){ vk+=l.k; vn+=l.nTot; });
+  $("visTot").textContent="Total : "+vk+" compte"+(vk>1?"s":"")+", "+num(vn)+" tournois par jour.";
+  [].forEach.call($("segLvl").children,function(b){ b.className=(+b.getAttribute("data-b")===S.b)?"on":""; });
+  [].forEach.call($("segMode").children,function(b){ b.className=(b.getAttribute("data-mode")===S.mode)?"on":""; });
+  [].forEach.call($("segTab").children,function(b){ b.className=(b.getAttribute("data-tab")===S.tab)?"on":""; });
+  var mo=S.mode;
+  $("gPal").style.display=mo==="palier"?"block":"none";
+  $("gVis").style.display=mo==="vision"?"block":"none";
+  $("gSingle").style.display=mo==="vision"?"none":"block";
+  $("cVis").style.display=mo==="vision"?"block":"none";
+  $("optsFixed").style.display=mo==="fixed"?"flex":"none";
+  $("optsPal").style.display=mo==="fixed"?"none":"flex";
+  $("unit").value=S.unit; $("showPaths").checked=S.showPaths; $("showBands").checked=S.showBands; $("showPaths2").checked=S.showPaths; $("showBands2").checked=S.showBands;
+  $("hGraph").textContent=mo==="palier"?"Ta bankroll avec les paliers":(mo==="vision"?"Trajectoires du scénario vision (gain cumulé de tous les comptes)":"Trajectoires de ton résultat cumulé");
+  $("hHist").textContent=mo==="palier"?"Bankroll à la fin de la période":"Résultat à la fin de la période";
+  $("tabSim").style.display=S.tab==="sim"?"block":"none";
+  $("tabSuivi").style.display=S.tab==="suivi"?"block":"none";
+}
+
+/* ---------- Résultats analytiques ---------- */
+var R=null, RS=null, hover=-1, stale=false, sampleCache={key:"",rows:null}, concNote="";
+function accountsList(){
+  var out=[];
+  if (S.mode==="vision"){ visLevels().forEach(function(L){ for(var i=0;i<L.k;i++) out.push({b:L.b,n:L.n,cev:L.cev}); }); }
+  else { volumes().list.forEach(function(n){ out.push({b:S.b,n:n,cev:S.cev[S.b]}); }); }
+  out.forEach(function(a,j){ a.name = j===0?"Simon":(j===1?"Mathieu":"Compte "+(j+1)); });
+  return out;
+}
+function curGDay(){
+  if (S.mode==="vision") return visCalc().perDay;
+  return roomsDay(volumes(),S.b).tot;
+}
+function renderQuick(){
+  if (S.mode==="vision") renderVisionQuick(); else renderFixedQuick();
+  fidelite(); scaling(); precision(); chance(); multBox();
+}
+function renderFixedQuick(){
+  var V=volumes(), b=S.b, cev=S.cev[b], a=mom(cev,false), s=mom(cev,true), beJ=breakEven(), beT=breakEven(rbEff());
+  var rd=roomsDay(V,b), gDay=rd.tot;
+  var q=quick(b,cev,V.n,V.bonus,false);
+  if(rd.on){ q.lo+=DPM()*rd.d2; q.hi+=DPM()*rd.d2; }
+  var h="";
+  h+=tile(eur(gDay), "gain attendu par jour de jeu (brut)", "jeu "+eur(rd.j1)+" + rakeback "+eur(rd.r1)+(V.bonus?" + classement "+eur(V.bonus):"")+(rd.on?" + room 2 "+eur(rd.d2):""), signCls(gDay));
+  h+=tile(eur(DPM()*gDay), "gain attendu par mois de "+DPM()+" jours de jeu (brut, avant parts et frais)", V.n>0?"9 mois sur 10 entre "+eur(q.lo)+" et "+eur(q.hi)+" (estimation sans les très gros jackpots)":"", signCls(gDay));
+  h+=tile(eur(12*DPM()*gDay), "gain attendu par an (12 mois de "+DPM()+" jours, brut)", "", signCls(gDay));
+  h+=tile(num(a.ev*100,1)+NB+"%", "ROI du jeu seul (gain par euro misé)", "+ rakeback "+num(a.rb*100,2)+" pt = "+num(a.tot*100,1)+" % au total ; victoires "+pc(a.p1,1)+" ; point mort : cEV "+num(beJ,0)+" jeu seul, "+num(beT,0)+" avec rakeback", signCls(a.tot));
+  var bk = s.tot<=0 ? null : s.sd*s.sd*Math.log(100)/(2*s.tot);
+  var bk5 = s.tot<=0 ? null : s.sd*s.sd*Math.log(20)/(2*s.tot);
+  h+=tile(bk==null?'<span class="bad">perdant</span>':eur0(Math.max(100,bk)*b), "bankroll conseillée", bk==null?"":"au moins 100 mises, et assez pour que le risque de tout perdre reste sous 1 % ; sous 5 % : "+eur0(Math.max(100,bk5)*b));
+  var ror = s.tot<=0 ? 1 : Math.exp(-2*s.tot*(S.bank/b)/(s.sd*s.sd));
+  h+=tile(pcs(ror), "risque de tout perdre à long terme, avec "+eur0(S.bank), "estimation sans les très gros jackpots ("+num(S.bank/b,0)+" mises)", ror>0.05?"bad":"");
+  var nProof = a.tot>0 ? Math.pow(1.645*a.sd/a.tot,2) : null;
+  h+=tile(nProof==null?"jamais":num(nProof)+" tournois", "pour être sûr à 95 % que tu gagnes vraiment", nProof==null||V.n<=0?"":"au rythme choisi : "+jours(nProof/V.n));
+  var sdc=S.sd, nCev=Math.pow(1.96*sdc/10,2);
+  h+=tile(num(nCev)+" tournois", "pour mesurer la cEV à ± 10", V.n>0?"au rythme choisi : "+jours(nCev/V.n)+" (écart-type des jetons : "+num(sdc)+")":"");
+  var jk=a.tot-s.tot, jv=1-(s.sd*s.sd)/(a.sd*a.sd), Tn=Math.max(1,S.days*V.n);
+  var p100=1-Math.pow(1-1.4e-4,Tn), p1000=1-Math.pow(1-1e-5,Tn);
+  h+=tile(a.tot>0?pc(jk/a.tot,0):"?", "du gain vient des jackpots x100 et plus", pc(jv,0)+" des écarts de résultat. Sur "+S.days+" j : au moins un x100+ "+pcs(p100)+", un x1000 "+pcs(p1000));
+  $("kA").innerHTML=h;
+  var rows="<tr><th>Niveau</th><th>cEV</th><th>ROI jeu</th><th>+ rakeback</th><th>Victoires</th><th>Par jour</th><th>Par mois</th><th>Mois, 90 %</th><th>Mois perdant</th><th>Pire baisse</th><th>Bankroll</th></tr>";
+  [1,2,5,10].forEach(function(bb){
+    var c2=S.cev[bb], r2=quick(bb,c2,V.n,0,true,rbFor(bb,V.acc)), mes=mesure(String(bb));
+    rows+='<tr'+(bb===b?' class="sel"':'')+'><td>'+bb+' € <span class="tag">'+(mes?"mesuré":"hypothèse")+'</span></td><td>'+num(c2,0)+'</td><td>'+num(r2.roi*100,1)+NB+'%</td><td>+'+num(r2.rbPts*100,2)+NB+'pt</td><td>'+pc(r2.p1,1)+'</td><td class="'+signCls(r2.jour)+'">'+eur(r2.jour)+'</td><td class="'+signCls(r2.mois)+'">'+eur(r2.mois)+'</td><td>'+eur(r2.lo)+' à '+eur(r2.hi)+'</td><td>'+(isNaN(r2.perd)?"?":pcs(r2.perd))+'</td><td>'+eur0(r2.dd)+'</td><td>'+(r2.bank==null?'<span class="bad">perdant</span>':eur0(r2.bank))+'</td></tr>';
+  });
+  $("tabN").innerHTML=rows;
+  $("hSens").textContent="Selon la cEV, au niveau "+b+" €";
+  rows="<tr><th>cEV</th><th>ROI jeu</th><th>Victoires</th><th>Par jour (jeu + rakeback)</th><th>Par mois</th><th>Écart par mois vs cEV 73</th><th>Mois perdant</th></tr>";
+  var rbf=rbFor(b,V.acc), ref=quick(b,73,V.n,0,false,rbf).mois;
+  [0,20,34,40,60,73,80,90,100,120].forEach(function(cc){
+    var r3=quick(b,cc,V.n,0,false,rbf), d=r3.mois-ref;
+    rows+='<tr'+(cc===73||cc===80||cc===90?' class="sel"':'')+'><td>'+cc+(cc===34?' <span class="tag">point mort</span>':'')+'</td><td>'+num(r3.roi*100,1)+NB+'%</td><td>'+pc(r3.p1,1)+'</td><td class="'+signCls(r3.jour)+'">'+eur(r3.jour)+'</td><td class="'+signCls(r3.mois)+'">'+eur(r3.mois)+'</td><td>'+(cc===73?"":eur(d))+'</td><td>'+(isNaN(r3.perd)?"?":pcs(r3.perd))+'</td></tr>';
+  });
+  $("tabC").innerHTML=rows;
+  conclusion(gDay);
+}
+function renderVisionQuick(){
+  var T=visCalc(), L=T.levels, h="", dm=DPM();
+  var sdM=Math.sqrt(dm*T.varD), muM=dm*T.muDs, perd=sdM>0?phi(-muM/sdM):NaN;
+  var inv=0; L.forEach(function(l){ inv+=l.nTot*l.b; });
+  var roiJ = inv>0 ? T.jeuDay/inv : 0;
+  h+=tile(eur(T.perDay),"gain attendu par jour de jeu, "+T.acc+" comptes (brut)","jeu "+eur(T.jeuDay)+" + rakeback "+eur(T.rbDay), signCls(T.perDay));
+  h+=tile(eur(dm*T.perDay),"gain attendu par mois de "+dm+" jours de jeu (brut, avant parts et frais)",sdM>0?"9 mois sur 10 entre "+eur(dm*T.perDay-1.645*sdM)+" et "+eur(dm*T.perDay+1.645*sdM)+" (estimation sans les très gros jackpots)":"", signCls(T.perDay));
+  h+=tile(eur(12*dm*T.perDay),"gain attendu par an (brut)","");
+  h+=tile(num(roiJ*100,1)+NB+"%","ROI du jeu seul, tous niveaux","gain du jeu divisé par les mises ; "+num(T.nDay)+" tournois par jour");
+  h+=tile(T.bankOk?eur0(T.bank):'<span class="bad">un niveau perdant</span>',"bankroll conseillée, tous les comptes","une bankroll par compte ; risque de tout perdre sous 1 %");
+  h+=tile(isNaN(perd)?"?":pcs(perd),"chance d'un mois perdant","tous comptes ensemble, sans les très gros jackpots");
+  $("kA").innerHTML=h;
+  var rows="<tr><th>Niveau</th><th>Comptes</th><th>Par compte et par jour</th><th>cEV</th><th>ROI jeu</th><th>Jeu par mois</th><th>Rakeback par mois</th><th>Total par mois</th><th>Bankroll conseillée</th></tr>";
+  L.forEach(function(l){
+    rows+='<tr><td>'+l.b+' € <span class="tag">'+(l.b===5?"hypothèse":"mesuré")+'</span></td><td>'+l.k+'</td><td>'+num(l.n)+'</td><td>'+num(l.cev,0)+'</td><td>'+num(l.roi*100,1)+NB+'%</td><td class="'+signCls(l.jeuDay)+'">'+eur(dm*l.jeuDay)+'</td><td>'+eur(dm*l.rbDay)+' <span class="mute">('+num(l.rbf*100,0)+' %)</span></td><td class="'+signCls(l.totDay)+'">'+eur(dm*l.totDay)+'</td><td>'+(l.bank==null?'<span class="bad">perdant</span>':eur0(l.bank))+'</td></tr>';
+  });
+  $("tabN").innerHTML=rows;
+  $("hSens").textContent="Selon ta cEV en 2 € (les autres niveaux ne bougent pas)";
+  var base=visCalc({c2:73}).perDay*dm, cur=T.perDay*dm;
+  var vals=[73,80,90]; if (vals.indexOf(S.vis.c2)<0) vals.push(S.vis.c2); vals.sort(function(a,c){return a-c;});
+  rows="<tr><th>cEV en 2 €</th><th>Niveau 2 € par mois</th><th>Tous les comptes par mois</th><th>Écart contre cEV 73</th><th>Écart par an</th></tr>";
+  vals.forEach(function(c){
+    var t=visCalc({c2:c}), l2=t.levels.filter(function(x){return x.b===2;})[0], m2=l2?dm*l2.totDay:0, tm=dm*t.perDay;
+    rows+='<tr'+(c===S.vis.c2?' class="sel"':'')+'><td>'+c+(c===73?' <span class="tag">mesuré</span>':(c===90?' <span class="tag">objectif</span>':''))+'</td><td class="'+signCls(m2)+'">'+eur(m2)+'</td><td class="'+signCls(tm)+'">'+eur(tm)+'</td><td>'+(c===73?"":eur(tm-base))+'</td><td>'+(c===73?"":eur(12*(tm-base)))+'</td></tr>';
+  });
+  $("tabC").innerHTML=rows;
+  var v90=visCalc({c2:90}).perDay*dm, v80=visCalc({c2:80}).perDay*dm, v73=base;
+  var h2='<div class="kpis">';
+  h2+=tile(eur(v80-v73),"par mois : cEV 80 contre 73 en 2 €","soit "+eur(12*(v80-v73))+" par an");
+  h2+=tile(eur(v90-v73),"par mois : cEV 90 contre 73 en 2 €","soit "+eur(12*(v90-v73))+" par an", "good");
+  h2+=tile(eur(v90-v80),"par mois : cEV 90 contre 80 en 2 €","soit "+eur(12*(v90-v80))+" par an");
+  h2+='</div><h3>Si le 5 € ne gagne pas</h3><div class="scroll"><table><tr><th>cEV en 5 €</th><th>Niveau 5 € par mois</th><th>Tous les comptes par mois</th><th>Écart contre ton réglage</th></tr>';
+  [0,20,34,40,60].concat(S.vis.c5).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,c){return a-c;}).forEach(function(c){
+    var t=visCalc({c5:c}), l5=t.levels.filter(function(x){return x.b===5;})[0], m5=l5?dm*l5.totDay:0, tm=dm*t.perDay;
+    h2+='<tr'+(c===S.vis.c5?' class="sel"':'')+'><td>'+c+'</td><td class="'+signCls(m5)+'">'+eur(m5)+'</td><td class="'+signCls(tm)+'">'+eur(tm)+'</td><td>'+eur(tm-cur)+'</td></tr>';
+  });
+  h2+='</table></div><p class="mute">Ce sont des moyennes. Le hasard fait bouger un mois de bien plus que ça (voir les graphiques). Montants bruts, avant les parts reversées et les frais. Si le 5 € fait une cEV sous 34, il fait perdre de l\'argent : il vaudrait mieux garder seulement le 1 € et le 2 €.</p>';
+  $("visBox").innerHTML=h2;
+  conclusion(T.perDay);
+}
+function conclusion(gDay){
+  var dm=DPM(), h='<h2>En bref</h2>', tiles="", lines="", mc=null;
+  if (S.mode==="palier"){
+    var r=(R&&R.kind==="palier")?R:null;
+    if(!r){ h+='<p class="mute">Calcul en cours...</p>'; $("concl").innerHTML=h; return; }
+    tiles+=tile(pc(r.lev[1].reached,0),"atteignent le 5 €","en "+S.days+" jours de jeu");
+    tiles+=tile(r.lev[1].dropPct==null?"?":pc(r.lev[1].dropPct,0),"redescendent ensuite du 5 € vers le 2 €","parmi ceux qui y sont montés", r.lev[1].dropPct>0.3?"warn":"");
+    tiles+=tile(eur0(r.fin.q50),"bankroll médiane à la fin","9 fois sur 10 entre "+eur0(r.fin.q05)+" et "+eur0(r.fin.q95));
+    h+='<div class="kpis">'+tiles+'</div><p class="mute">'+concNote+' Mode paliers : une seule caisse pour les comptes affichés, rakeback compris.</p>';
+    $("concl").innerHTML=h; return;
+  }
+  var mois=dm*gDay, lo=null, hi=null, perd=null;
+  if (R && (R.kind==="fixed"||R.kind==="vision") && R.probes){ mc=R; lo=R.probes[2].q05; hi=R.probes[2].q95; perd=R.probes[2].pLoss; }
+  if (S.mode==="vision"){
+    var T=visCalc();
+    if (lo==null){ var sdM=Math.sqrt(dm*T.varD); lo=mois-1.645*sdM; hi=mois+1.645*sdM; perd=sdM>0?phi(-dm*T.muDs/sdM):NaN; }
+    lines+='<p class="mute">Scénario vision : '+T.acc+' comptes, '+num(T.nDay)+' tournois par jour. Le total compte le jeu ('+eur(dm*T.jeuDay)+') et le rakeback ('+eur(dm*T.rbDay)+'), '+num(rbEff()*100,0)+' % des frais en moyenne.</p>';
+    var l5=T.levels.filter(function(x){return x.b===5;})[0];
+    if (l5){
+      var c5=S.vis.c5, a1=visCalc({c5:c5-20}).perDay*dm, a2=visCalc({c5:c5+20}).perDay*dm, a0=visCalc({c5:0}).perDay*dm;
+      lines+='<p class="warn"><b>Le 5 € n\'est pas prouvé.</b> À cEV '+c5+' ± 20, le total va de '+eur(a1)+' à '+eur(a2)+' par mois. S\'il fait cEV 0 : '+eur(a0)+' par mois ('+eur(a0-mois)+').</p>';
+    }
+  } else {
+    var V=volumes(), b=S.b, cev=S.cev[b], a=mom(cev,false);
+    var who = S.view==="all" ? (S.nC>1?"les "+S.nC+" comptes ensemble":"le compte de Simon") : (S.view==="simon"?"le compte de Simon":"le compte de Mathieu");
+    if (V.n<=0){ h+='<p>Aucun tournoi par jour sur ce compte : monte le volume.</p>'; $("concl").innerHTML=h; return; }
+    var q=quick(b,cev,V.n,V.bonus,false,rbEff()), rd=roomsDay(V,b);
+    if (lo==null){ lo=q.lo+(rd.on?dm*rd.d2:0); hi=q.hi+(rd.on?dm*rd.d2:0); perd=q.perd; }
+    lines+='<p class="mute">À '+b+' €, cEV '+num(cev,0)+', '+num(V.n)+' tournois par jour ('+who+'). Jeu '+eur(rd.j1)+' + rakeback '+eur(rd.r1)+' par jour ('+num(rbEff()*100,1)+' % des frais).'+(rd.on?' <b>Room en plus, à part : '+eur(rd.d2)+' par jour</b> (déjà dans le total).':'')+' Point mort : cEV '+num(breakEven(),0)+' sans rakeback, '+num(breakEven(rbEff()),0)+' avec. '+(a.tot<=0?'<span class="bad">Avec ce réglage, tu perds en moyenne.</span>':'')+'</p>';
+    var vs=volStatus();
+    if (vs){
+      var ra=rbAutoFor(b,V.acc), rm=S.rb/100, mA=quick(b,cev,V.n,V.bonus,false,ra).mois, mM=quick(b,cev,V.n,V.bonus,false,rm).mois;
+      lines+='<p class="mute"><b>Rakeback :</b> selon ton volume ('+vs.who+' : '+vs.name+', '+num(vs.rate*100,0)+' %) = '+eur(mA)+' par mois ; en manuel ('+S.rb+' %) = '+eur(mM)+' par mois. '+(S.rbAuto?'Le chiffre du haut utilise « Selon mon volume ».':'Le chiffre du haut utilise « Manuel ».')+'</p>';
+    }
+  }
+  tiles+=tile(eur(gDay),"par jour de jeu","brut : avant les parts reversées et les frais", signCls(gDay));
+  tiles+=tile(eur(mois),"par mois de "+dm+" jours de jeu","brut : avant les parts reversées et les frais", signCls(gDay));
+  tiles+=tile(eur(lo)+" à "+eur(hi),"fourchette d'un mois","9 fois sur 10"+(perd!=null&&!isNaN(perd)?" ; mois perdant : "+pcs(perd,mc?mc.P:0):""));
+  h+='<div class="kpis">'+tiles+'</div>'+lines+(concNote?'<p class="mute">'+concNote+'</p>':'');
+  $("concl").innerHTML=h;
+}
+
+/* ---------- Fidélité PMU : 2 lignes en haut, le détail replié ---------- */
+function fidelite(){
+  var accs=accountsList().filter(function(a){return a.n>0;}), b=S.b, h="";
+  // --- 2 lignes
+  var top="";
+  if (accs.length){
+    var a0=accs[0], st=starOf(rakeMonth(a0.b,a0.n)), per0=RAKE*a0.b;
+    var st5=starOf(rakeMonth(5,a0.n)), per5=RAKE*5;
+    top+='<p><b>À ce volume ('+a0.name+', '+a0.b+' €, '+num(a0.n)+' tournois par jour) : '+st.name+', '+num(st.rate*100,0)+' % de rakeback.</b> '+(S.rbAuto?'C\'est ce que la page utilise.':'La page utilise le réglage manuel ('+S.rb+' %) ; change dans « Rakeback » plus haut.')+'</p>';
+    top+='<p>Le 5 € fait monter plus vite : un tournoi à 5 € rapporte '+num(per5,2)+' point (contre '+num(per0,2)+' à '+a0.b+' €), donc le même volume donnerait '+st5.name+' ('+num(st5.rate*100,0)+' %).</p>';
+  } else top+='<p class="mute">Aucun compte avec du volume.</p>';
+  $("fidTop").innerHTML=top;
+  // --- détail
+  h+='<p class="mute">Programme PMU Poker Rewards : 1 point par euro de frais (7 % de la mise en Twister). Les statuts Star 1 à Star 5 se gagnent sur un mois, Crack et Suprême sur un trimestre. Une montée est immédiate ; chaque période repart de zéro. Source : page officielle PMU (cloud.contact.pmu.fr/programme_pmu_poker_rewards), non vérifiée en détail ; chez Simon et Mathieu le 30/10 : Star 4, paliers de 20 points, ce qui colle.</p>';
+  var rows="<tr><th>Statut</th><th>Points requis</th><th>Rakeback</th><th>Avantage</th></tr>";
+  var adv=["1 point = 1 roue ; 5 points = 1 ticket Twister 0,25 €","Freeroll mensuel 1 500 €","Freeroll mensuel 1 500 €","Freeroll mensuel 5 000 € ; 2 € tous les 20 points","Freeroll mensuel 5 000 € ; 7,50 € tous les 50 points"];
+  STARS.forEach(function(s,i){ rows+='<tr><td>'+s[0]+'</td><td>'+(i===0?"départ":num(s[1])+" par mois")+'</td><td>'+num(s[2]*100,1)+NB+'%</td><td>'+adv[i]+'</td></tr>'; });
+  rows+='<tr><td>Crack</td><td>5 000 par trimestre</td><td>25 %</td><td>Ticket live annuel 250 € ; 25 € tous les 100 points</td></tr><tr><td>Suprême</td><td>20 000 par trimestre</td><td>40 %</td><td>Accompagnement Privilège ; 200 € tous les 500 points</td></tr>';
+  h+='<div class="scroll"><table>'+rows+'</table></div>';
+  rows="<tr><th>Compte</th><th>Niveau</th><th>Tournois par jour</th><th>Points par mois</th><th>Statut</th><th>Rakeback</th><th>Rakeback par mois</th><th>Pour finir Star 5 (reste "+num(S.rest)+" points)</th></tr>";
+  accs.forEach(function(a){
+    var R_=rakeMonth(a.b,a.n), st=starOf(R_), perDay=R_/DPM();
+    var fin = perDay>0 ? jours(S.rest/perDay)+", "+num(S.rest/(RAKE*a.b))+" tournois" : "?";
+    rows+='<tr><td>'+a.name+'</td><td>'+a.b+' €</td><td>'+num(a.n)+'</td><td>'+num(R_)+'</td><td>'+st.name+'</td><td>'+num(st.rate*100,1)+NB+'%</td><td class="good">'+eur(R_*st.rate)+'</td><td>'+fin+'</td></tr>';
+  });
+  h+='<h3>Ton volume</h3><div class="scroll"><table>'+rows+'</table></div>';
+  var per = RAKE*b;
+  h+='<p class="mute">À '+b+' €, un tournoi rapporte '+num(per,2)+' point. Pour Star 5 il faut '+num(1000/per)+' tournois dans le mois, soit '+num(1000/per/DPM())+' par jour. Pour Crack : '+num(5000/per/3/DPM())+' par jour pendant 3 mois. Pour Suprême : '+num(20000/per/3/DPM())+' par jour. Exemple de Simon : 680 points = 680 € de frais = '+num(680/(RAKE*2))+' tournois à 2 €.</p>';
+  rows="<tr><th>Tournois par jour</th><th>Points par mois</th><th>Statut</th><th>Rakeback</th><th>Rakeback par mois</th></tr>";
+  [100,200,300,500,800,1300,2000].forEach(function(n){
+    var R_=rakeMonth(b,n), st=starOf(R_);
+    rows+='<tr><td>'+num(n)+'</td><td>'+num(R_)+'</td><td>'+st.name+'</td><td>'+num(st.rate*100,1)+NB+'%</td><td class="good">'+eur(R_*st.rate)+'</td></tr>';
+  });
+  h+='<h3>Statut atteint selon le volume, à '+b+' € par compte</h3><div class="scroll"><table>'+rows+'</table></div>';
+  h+='<p class="mute">Le statut « en régime établi » suppose le même rake chaque mois. Le premier mois est plus bas, et un trimestre à moins de 5 000 points ne donne pas Crack. Le rakeback réel est versé par palier de points (par exemple 2 € tous les 20 points en Star 4), pas à la fin du mois.</p>';
+  $("fidBox").innerHTML=h;
+}
+
+function precision(){
+  var h="", any=false;
+  h+='<p class="mute">Ce qu\'on connaît de la cEV vient de nos tournois joués par le robot. Plus il y en a, plus l\'intervalle se resserre. La cible est 10 000 tournois par niveau.</p>';
+  var rows="<tr><th>Niveau</th><th>Tournois</th><th>cEV mesurée</th><th>Intervalle à 95 %</th><th>À 10 000</th><th>Avancement</th></tr>";
+  var perDay=S.nS+(S.nC>1?S.nM:0), be=breakEven(rbEff()), verdict=[];
+  ["1","2"].forEach(function(lv){
+    var e=D&&D.ensemble&&D.ensemble[lv]; if(!e) return; any=true;
+    var se=e.erreur_type, lo=e.cev-1.96*se, hi=e.cev+1.96*se, se10=e.sd_jetons/100, fr=Math.min(1,e.tournois/10000);
+    rows+='<tr><td>'+lv+' €</td><td>'+num(e.tournois)+'</td><td>'+num(e.cev,1)+'</td><td>'+num(lo,0)+' à '+num(hi,0)+'</td><td>± '+num(1.96*se10,1)+'</td><td><div class="pb"><div style="width:'+(100*fr).toFixed(1)+'%"></div></div><span class="mute">'+pc(fr,0)+'</span></td></tr>';
+    var days = perDay>0 ? Math.max(0,(10000-e.tournois)/perDay) : null;
+    verdict.push('<li><b>'+lv+' €</b> : cEV '+num(e.cev,0)+', intervalle '+num(lo,0)+' à '+num(hi,0)+'. '+(lo>be?'<span class="good">Au-dessus du point mort ('+num(be,0)+', rakeback compris) avec 95 % de confiance.</span>':'<span class="warn">Le bas de l\'intervalle ('+num(lo,0)+') passe sous le point mort ('+num(be,0)+') : pas encore prouvé.</span>')+(days!=null&&e.tournois<10000?' Pour 10 000 tournois à ce niveau, au rythme de '+num(perDay)+' par jour : environ '+jours(days)+'.':'')+'</li>');
+  });
+  rows+='<tr><td>5 €</td><td>0</td><td colspan="4" class="mute" style="text-align:left">Jamais joué : aucune mesure. À 300 tournois, l\'intervalle fera environ ± '+num(1.96*S.sd/Math.sqrt(300),0)+' ; à 1 000, ± '+num(1.96*S.sd/Math.sqrt(1000),0)+'.</td></tr>';
+  if(!any){ $("precBox").innerHTML=h+'<p class="mute">Pas de données réelles dans cette page.</p>'; return; }
+  h+='<div class="scroll"><table>'+rows+'</table></div><ul>'+verdict.join("")+'</ul>';
+  h+='<p class="mute">Écart-type des jetons gagnés par tournoi, mesuré : '+((mesure("2")||mesure("1")).sd_jetons?num((mesure("2")||mesure("1")).sd_jetons,0):"?")+'. L\'intervalle = cEV ± 1,96 × écart-type ÷ racine du nombre de tournois. 0,25 € : données séparées, non utilisées ici.</p>';
+  $("precBox").innerHTML=h;
+}
+
+
+
+function verdictZ(z){ if(z==null) return "?"; var a=Math.abs(z); return a<1?"normal":(a<2?(z>0?"un peu de chance":"un peu de malchance"):(z>0?"beaucoup de chance":"beaucoup de malchance")); }
+function chance(){
+  if(!D){ $("chanceBox").innerHTML='<p class="mute">Pas de données réelles dans cette page.</p>'; return; }
+  var h='<p class="mute">Pour chaque compte et niveau : ce que le jeu mérite (avec la cEV mesurée), ce que donnent les vraies places, et ce qu\'on a vraiment gagné (hors rakeback). La différence est de la chance : aux tapis, puis aux multiplicateurs. Le z dit si c\'est normal (entre -1 et 1) ou rare (au-delà de 2).</p>';
+  var rows="<tr><th>Compte, niveau</th><th>Tournois</th><th>Victoires</th><th>Attendu (cEV)</th><th>Réel</th><th>Mérité par le jeu</th><th>Chance tapis</th><th>z</th><th>Chance mult.</th><th>z</th></tr>";
+  ["simon","mathieu"].forEach(function(nm){
+    var c=D.comptes[nm]; if(!c) return;
+    ["0.25","1","2"].forEach(function(lv){
+      var e=c.niveaux[lv]; if(!e) return;
+      rows+='<tr><td>'+c.nom+', '+num(+lv,lv==="0.25"?2:0)+' €</td><td>'+num(e.tournois)+'</td><td>'+pc(e.pct_victoires,1)+'</td><td>'+pc(e.pct_victoires_attendu_cev,1)+'</td><td class="'+signCls(e.net_eur)+'">'+eur(e.net_eur,1)+'</td><td>'+eur(e.jeu_eur,1)+'</td><td class="'+signCls(e.chance_tapis_eur)+'">'+eur(e.chance_tapis_eur,1)+'</td><td>'+(e.z_tapis==null?"?":num(e.z_tapis,1))+'</td><td class="'+signCls(e.chance_mult_eur)+'">'+eur(e.chance_mult_eur,1)+'</td><td>'+(e.z_mult==null?"?":num(e.z_mult,1))+'</td></tr>';
+    });
+  });
+  h+='<div class="scroll"><table>'+rows+'</table></div>';
+  var lines=[];
+  [["1",D.ensemble["1"]],["2",D.ensemble["2"]]].forEach(function(a){ var e=a[1]; if(!e) return; var b=+a[0];
+    lines.push('<li><b>'+b+' €</b> : le modèle prédit '+num(100*e.jeu_eur/e.tournois/b,1)+NB+'% de gain par tournoi (jeu seul) avec la cEV mesurée ; le réel est '+num(100*e.net_par_tournoi_bi,1)+NB+'%. Écart : '+num(100*(e.net_par_tournoi_bi-e.jeu_eur/e.tournois/b),1)+' points, dû à la chance ('+verdictZ(e.z_tapis)+' aux tapis, '+verdictZ(e.z_mult)+' aux multiplicateurs).</li>'); });
+  h+='<ul>'+lines.join("")+'</ul><p class="mute">Les multiplicateurs vus contre attendus sont dans le bloc « Les gros multiplicateurs ».</p>';
+  $("chanceBox").innerHTML=h;
+}
+
+/* ---------- Les gros multiplicateurs ---------- */
+var MULTS=[[10,"x10"],[20,"x20"],[100,"x100"],[200,"x200"],[1000,"x1000"]];
+function probMult(m){ var p=0; BAREME.forEach(function(r){ if(r[0]===m) p=r[1]; }); return p; }
+function probAtLeast(m){ var p=0; BAREME.forEach(function(r){ if(r[0]>=m) p+=r[1]; }); return p; }
+function multBox(){
+  var V=volumes(), b=S.b, n=V.n;
+  var rows="<tr><th>Multiplicateur</th><th>Tournois à envoyer pour en toucher 1 en moyenne</th><th>Pour 9 chances sur 10 d'en avoir au moins 1</th><th>Tu touches (1er / 2e / 3e)</th><th>À ton rythme ("+num(n)+" par jour)</th></tr>";
+  function ligne(lab,p,prizeTxt,tripl){
+    var one=1/p, nine=Math.log(10)/p;
+    return '<tr><td>'+lab+'</td><td>'+num(one)+'</td><td>'+num(nine)+'</td><td>'+tripl+'</td><td>'+(n>0?"1 tous les "+jours(one/n)+" ; 9 chances sur 10 en "+jours(nine/n):"?")+'</td></tr>';
+  }
+  MULTS.forEach(function(r){
+    var m=r[0], p=probMult(m), tot=m*b;
+    rows+=ligne(r[1],p,eur0(tot),eur0(tot*.75)+" / "+eur0(tot*.15)+" / "+eur0(tot*.10));
+  });
+  rows+=ligne("x10 et plus (tous)",probAtLeast(10),"à partir de "+eur0(10*b),"toujours au moins "+eur0(b));
+  rows+=ligne("x100 et plus (tous)",probAtLeast(100),"à partir de "+eur0(100*b),"au moins "+eur0(10*b));
+  $("multBox").innerHTML='<p class="mute">Chiffres pour le niveau '+b+' € (le barème est le même à tous les niveaux, seul le prix change). « En moyenne » : sur un très long moment ; sur une courte période, c\'est le hasard qui décide. 9 chances sur 10 = il faut environ 2,3 fois plus de tournois que « 1 en moyenne ».</p><div class="scroll"><table>'+rows+'</table></div>';
+  // mini-simulateur
+  var N=S.mN, r2="<tr><th>Sur "+num(N)+" tournois</th><th>Chance d'en avoir au moins 1</th><th>Nombre moyen</th></tr>";
+  [[10,"x10 ou plus"],[20,"x20 ou plus"],[100,"x100 ou plus"],[200,"x200 ou plus"],[1000,"x1000"]].forEach(function(r){
+    var p=probAtLeast(r[0]), c=1-Math.pow(1-p,N), moy=N*p;
+    r2+='<tr><td>'+r[1]+'</td><td class="'+(c>=.5?"good":"")+'">'+pcs(c)+'</td><td>'+num(moy,moy<10?2:0)+'</td></tr>';
+  });
+  $("multSim").innerHTML='<div class="scroll"><table>'+r2+'</table></div><p class="mute">'+num(N)+' tournois = '+(n>0?jours(N/n)+' de jeu à ton rythme.':'?')+' Chaque ligne est un calcul exact (pas un tirage au sort) : chance = 1 moins la chance de n\'en avoir aucun.</p>';
+  // réel
+  var rr="";
+  if (!D) rr='<p class="mute">Pas de données réelles dans cette page.</p>';
+  else {
+    var rows3="<tr><th>Qui</th><th>Tournois (1 € et 2 €)</th><th>x10 ou plus tirés</th><th>Attendus</th><th>Verdict</th></tr>";
+    function sommeX(c){ var t=0,g=0,ga=0; ["1","2"].forEach(function(lv){ var e=c.niveaux[lv]; if(e){ t+=e.tournois; g+=e.tournois_x10_et_plus||0; ga+=e.tournois_x10_et_plus_attendus||0; } }); return {t:t,g:g,ga:ga}; }
+    var tot={t:0,g:0,ga:0};
+    ["simon","mathieu"].forEach(function(nm){ var c=D.comptes[nm]; if(!c) return; var x=sommeX(c); tot.t+=x.t; tot.g+=x.g; tot.ga+=x.ga;
+      rows3+='<tr><td>'+c.nom+'</td><td>'+num(x.t)+'</td><td>'+x.g+'</td><td>'+num(x.ga,1)+'</td><td>'+verdictCount(x.g,x.ga)+'</td></tr>'; });
+    rows3+='<tr class="sel"><td>Les deux</td><td>'+num(tot.t)+'</td><td>'+tot.g+'</td><td>'+num(tot.ga,1)+'</td><td>'+verdictCount(tot.g,tot.ga)+'</td></tr>';
+    var vus={}, att={}, nW=0;
+    ["1","2"].forEach(function(lv){ var e=D.ensemble[lv]; if(!e) return; nW+=e.victoires;
+      Object.keys(e.mult_vus_sur_victoires).forEach(function(m){ vus[m]=(vus[m]||0)+e.mult_vus_sur_victoires[m]; });
+      Object.keys(e.mult_attendus_sur_victoires).forEach(function(m){ att[m]=(att[m]||0)+e.mult_attendus_sur_victoires[m]; }); });
+    var r4="<tr><th>Multiplicateur</th><th>Tiré sur nos victoires</th><th>Attendu</th></tr>";
+    ["2","3","4","5","10","20","100","200","1000"].forEach(function(m){ r4+='<tr><td>x'+m+'</td><td>'+(vus[m]||0)+'</td><td>'+num(att[m]||0,1)+'</td></tr>'; });
+    rr='<p class="mute">Les x10 et plus touchent tout le monde (même le 3e) : on les voit donc dans tous les tournois. Les petits multiplicateurs (x2 à x5) ne se voient que quand on gagne, car le perdant ne touche rien.</p><div class="scroll"><table>'+rows3+'</table></div><h3>Les multiplicateurs vus sur nos '+num(nW)+' victoires</h3><div class="scroll"><table>'+r4+'</table></div>';
+  }
+  $("multReel").innerHTML=rr;
+}
+function verdictCount(g,ga){ var e=g-ga, lim=2*Math.sqrt(Math.max(ga,1)); return Math.abs(e)<=lim ? "normal" : (e>0?"plus que prévu":"moins que prévu"); }
+
+/* ---------- Coûts et parts : du brut au net ---------- */
+function scaling(){
+  var accsAll=accountsList(), isV=S.mode==="vision", V=volumes();
+  function accGross(a,Tn){                                    // gain brut par mois d'un compte (room 2 comprise)
+    var rbf=rbFor(a.b,[a.n]), m=mom(a.cev,false,rbf), s=mom(a.cev,true,rbf);
+    var bn = (!isV && Tn>0) ? S.bonus*a.n/Tn : 0, g=DPM()*(a.n*m.tot*a.b+bn), mu=DPM()*(a.n*s.tot*a.b+bn), vr=DPM()*a.n*s.sd*s.sd*a.b*a.b;
+    if (!isV && S.room2){
+      var n2=a.n*S.r2coef, m2=mom(S.r2cev,false,rbf,S.r2rake/100), s2=mom(S.r2cev,true,rbf,S.r2rake/100);
+      g+=DPM()*n2*m2.tot*a.b; mu+=DPM()*n2*s2.tot*a.b; vr+=DPM()*n2*s2.sd*s2.sd*a.b*a.b;
+    }
+    return {g:g,mu:mu,vr:vr};
+  }
+  function build(list){
+    var Tn=list.reduce(function(x,a){return x+a.n;},0), gross=0, rev=0, prime=0, tits=0, mu=0, vr=0, net0=0, netM=0;
+    var nC=list.length, mach1=S.mpa*S.mcy/12, spm=S.spm?300:0;
+    list.forEach(function(a,i){
+      var x=accGross(a,Tn), r=0, p=0; gross+=x.g; mu+=x.mu; vr+=x.vr;
+      if(i>=2){ tits++; r=S.pct/100*Math.max(0,x.g); p=S.prim; rev+=r; prime+=p; }
+      if(i===0) net0+=x.g-r-p-mach1; else netM+=x.g-r-p-mach1;   // 30/10 : compte de Simon / comptes de Mathieu
+    });
+    var mach=nC*mach1, couts=rev+prime+mach+spm, pool=gross-couts;
+    net0-=spm/2; netM-=spm/2;                                    // SpinPro Max : moitié-moitié
+    var d=Math.max(0,S.dctv||0)/100, pS0=Math.max(0,S.sS0/100-d), pSM=Math.max(0,S.sSM/100-d);
+    var simon=net0*pS0+netM*pSM, mathieu=pool-simon, rembourse=Math.max(0,d*pool);
+    var simonApres=net0*S.sS0/100+netM*S.sSM/100;
+    return {T:Tn,gross:gross,rev:rev,prime:prime,tits:tits,mach:mach,spm:spm,couts:couts,pool:pool,simon:simon,mathieu:mathieu,net0:net0,netM:netM,
+            pS0:pS0,pSM:pSM,rembourse:rembourse,simonApres:simonApres,perd:vr>0?phi(-mu/Math.sqrt(vr)):NaN,n:nC};
+  }
+  var c=build(accsAll), n=c.n;
+  var h=tile(eur(c.gross),"brut par mois, "+n+" compte"+(n>1?"s":"")+" ("+num(c.T)+" tournois par jour, "+DPM()+" jours de jeu)","avant les parts et les frais", signCls(c.gross));
+  h+=tile(eur(-c.couts),"coûts par mois","parts des titulaires "+eur0(c.rev)+", primes "+eur0(c.prime)+", machines "+eur0(c.mach)+(c.spm?", SpinPro Max "+eur0(c.spm):""));
+  h+=tile(eur(c.pool),"net à partager","brut moins les coûts", signCls(c.pool));
+  var parts="son compte "+Math.round(c.pS0*100)+" %"+(n>=2?", comptes de Mathieu "+Math.round(c.pSM*100)+" %":"");
+  h+=tile(eur(c.simon),"net pour Simon par mois", parts+(S.dctv>0?" (dette CTV en cours)":""), signCls(c.simon));
+  h+=tile(eur(c.mathieu),"net pour Mathieu par mois", S.dctv>0?"dont "+eur0(c.rembourse)+" de dette CTV":"", signCls(c.mathieu));
+  var moisD = (S.dctv>0 && S.dette>0 && c.rembourse>0) ? S.dette/c.rembourse : null;
+  h+=tile(S.dctv>0&&S.dette>0 ? (moisD==null?"jamais":num(moisD,1)+" mois") : "finie", "dette CTV remboursée en", S.dette>0?"reste "+eur0(S.dette)+", "+eur0(c.rembourse)+" par mois ; ensuite Simon touche "+eur0(c.simonApres)+" par mois":"");
+  h+=tile(isNaN(c.perd)?"?":pcs(c.perd),"chance d'un mois perdant (brut)","tous comptes ensemble, sans les très gros jackpots");
+  $("kS").innerHTML=h;
+  var bn="<tr><th>Ligne</th><th>Par mois</th></tr>";
+  bn+='<tr><td>Gains bruts de tous les comptes</td><td class="'+signCls(c.gross)+'">'+eur(c.gross)+'</td></tr>';
+  bn+='<tr><td>Part reversée aux titulaires ('+S.pct+' % de leurs gains, '+c.tits+' compte'+(c.tits>1?"s":"")+')</td><td>'+eur(-c.rev)+'</td></tr>';
+  bn+='<tr><td>Prime par compte de titulaire ('+eur0(S.prim)+' par mois chacun)</td><td>'+eur(-c.prime)+'</td></tr>';
+  bn+='<tr><td>Machines ('+n+' compte'+(n>1?"s":"")+' x '+S.mpa+' x '+eur0(S.mcy)+' par an)</td><td>'+eur(-c.mach)+'</td></tr>';
+  if (S.spm) bn+='<tr><td>SpinPro Max</td><td>'+eur(-c.spm)+'</td></tr>';
+  bn+='<tr class="sel"><td>Net à partager</td><td>'+eur(c.pool)+'</td></tr>';
+  bn+='<tr><td>Net du compte de Simon</td><td class="'+signCls(c.net0)+'">'+eur(c.net0)+'</td></tr>';
+  if (n>=2) bn+='<tr><td>Net des comptes de Mathieu</td><td class="'+signCls(c.netM)+'">'+eur(c.netM)+'</td></tr>';
+  if (S.dctv>0) bn+='<tr><td>Dont remboursement dette CTV vers Mathieu ('+S.dctv+' % de tous les gains)</td><td>'+eur(c.rembourse)+'</td></tr>';
+  bn+='<tr><td>Simon (son compte '+Math.round(c.pS0*100)+' %'+(n>=2?', comptes de Mathieu '+Math.round(c.pSM*100)+' %':'')+')</td><td class="'+signCls(c.simon)+'">'+eur(c.simon)+'</td></tr>';
+  bn+='<tr><td>Mathieu (le reste)</td><td class="'+signCls(c.mathieu)+'">'+eur(c.mathieu)+'</td></tr>';
+  $("tabBN").innerHTML=bn;
+  if (isV){ $("tabX").innerHTML=""; $("hX").style.display="none"; return; }
+  $("hX").style.display="block";
+  var rows="<tr><th>Comptes</th><th>Brut par mois</th><th>Coûts</th><th>Net Simon</th><th>Net Mathieu</th><th>Mois perdant</th></tr>";
+  for(var k=1;k<=6;k++){
+    var list=[]; for(var i=0;i<k;i++) list.push({b:S.b,n:i===0?S.nS:(i===1?S.nM:S.nX),cev:S.cev[S.b]});
+    var r=build(list);
+    rows+='<tr'+(k===S.nC?' class="sel"':'')+'><td>'+k+'</td><td class="'+signCls(r.gross)+'">'+eur(r.gross)+'</td><td>'+eur(-r.couts)+'</td><td class="'+signCls(r.simon)+'">'+eur(r.simon)+'</td><td class="'+signCls(r.mathieu)+'">'+eur(r.mathieu)+'</td><td>'+(isNaN(r.perd)?"?":pcs(r.perd))+'</td></tr>';
+  }
+  $("tabX").innerHTML=rows;
+}
+
+/* ---------- Enregistrer, charger, partager un scénario ---------- */
+function snapshot(){ var o=JSON.parse(JSON.stringify(S)); delete o.seed; delete o.tab; return o; }
+function b64u(str){ return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function unb64u(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; return decodeURIComponent(escape(atob(s))); }
+function applySnapshot(o){                                    // ne prend que les réglages connus, du bon type
+  if(!o || typeof o!=="object") return false;
+  var d=defauts(), keep={seed:S.seed, tab:S.tab};
+  Object.keys(d).forEach(function(k){
+    if(!(k in o)) return;
+    if (d[k] && typeof d[k]==="object"){ if(o[k] && typeof o[k]==="object") Object.keys(d[k]).forEach(function(j){ if(typeof o[k][j]===typeof d[k][j]) d[k][j]=o[k][j]; }); }
+    else if (typeof o[k]===typeof d[k]) d[k]=o[k];
+  });
+  S=d; S.seed=keep.seed; S.tab=keep.tab;
+  R=null; RS=null; sampleCache={key:"",rows:null}; changed(true);
+  return true;
+}
+function scMsg(t){ var e=$("scMsg"); if(e) e.textContent=t; }
+function scStore(){ try{ return JSON.parse(localStorage.getItem("twister-scenarios")||"{}")||{}; }catch(e){ return null; } }
+function scFill(){
+  var st=scStore(), sel=$("scList"), h="";
+  if(st) Object.keys(st).sort().forEach(function(k){ h+='<option value="'+esc(k).replace(/"/g,"&quot;")+'">'+esc(k)+'</option>'; });
+  sel.innerHTML=h||'<option value="">(aucun)</option>';
+}
+function scSave(){
+  var name=($("scName").value||"").trim() || ("Scénario "+new Date().toLocaleString("fr-FR").slice(0,16));
+  try{
+    var st=scStore()||{}; st[name]=snapshot();
+    localStorage.setItem("twister-scenarios",JSON.stringify(st));
+    scFill(); $("scList").value=name; scMsg("Scénario « "+name+" » enregistré sur cet appareil.");
+  }catch(e){ scMsg("Impossible d'enregistrer ici (stockage bloqué). Copie plutôt le lien du scénario."); }
+}
+function scLoad(){
+  var st=scStore(), k=$("scList").value;
+  if(!st||!k||!st[k]){ scMsg("Aucun scénario à charger."); return; }
+  applySnapshot(st[k]); scMsg("Scénario « "+k+" » chargé.");
+}
+function scDel(){
+  var k=$("scList").value;
+  try{ var st=scStore()||{}; if(k&&st[k]){ delete st[k]; localStorage.setItem("twister-scenarios",JSON.stringify(st)); scFill(); scMsg("Scénario « "+k+" » supprimé de cet appareil."); } }catch(e){ scMsg("Stockage bloqué."); }
+}
+function scCodeNow(){ return b64u(JSON.stringify(snapshot())); }
+function scLinkNow(){ var base=""; try{ base=String(location.href).split("#")[0]; }catch(e){ base=""; } return base+"#s="+scCodeNow(); }
+function scCopy(){
+  var link=scLinkNow(); $("scLink").value=link; $("scBox").open=true;
+  var ok=false;
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(function(){ scMsg("Lien copié. Il contient tes réglages, pas la clé des données."); },function(){ scMsg("Copie bloquée : le lien est dans « Mes scénarios enregistrés », sélectionne-le."); }); ok=true; } }catch(e){ ok=false; }
+  if(!ok){ scMsg("Copie bloquée : le lien est dans « Mes scénarios enregistrés », sélectionne-le."); try{ $("scLink").select(); }catch(e){} }
+}
+function scFromText(t){
+  var m=String(t||"").match(/(?:^|[#&?])s=([A-Za-z0-9_-]+)/), code=m?m[1]:String(t||"").trim();
+  try{ return applySnapshot(JSON.parse(unb64u(code))); }catch(e){ return false; }
+}
+function scFromHash(){
+  var h=""; try{ h=String(location.hash||""); }catch(e){ h=""; }
+  if(/[#&]s=/.test(h)) return scFromText(h);
+  return false;
+}
+
+/* ---------- Résultats simulés ---------- */
+function curK(){ return (S.mode==="fixed" && S.unit==="bi") ? 1/S.b : 1; }
+function unitLbl(){ return (S.mode==="fixed" && S.unit==="bi") ? "buy-ins" : "€"; }
+function legend(){
+  var c=colors(), h="";
+  h+='<span><i style="background:'+rgba(c.accent,0.14)+'"></i>95 % des cas</span><span><i style="background:'+rgba(c.accent,0.26)+'"></i>70 % des cas</span>';
+  h+='<span><i style="background:'+c.accent+'"></i>médiane</span>';
+  if(S.mode!=="palier") h+='<span><i style="background:'+c.warn+'"></i>attendu (EV)</span>';
+  h+='<span><i style="background:'+rgba(c.ink,0.4)+'"></i>trajectoires</span>';
+  $("leg").innerHTML=h;
+}
+function paintMain(){
+  var cv=$("cv"); if(!cv) return;
+  legend();
+  var r=R||RS; if(!r) { setupCanvas(cv); return; }
+  var V=volumes(), k=curK();
+  var o={x:r.x,k:k,bands:r.bands,samples:r.samples,showPaths:S.showPaths,showBands:S.showBands,xTitle:"jours ("+num(r.nDay)+" tournois par jour)",yTitle:unitLbl(),hover:hover,zero:r.kind!=="palier"};
+  if(r.kind!=="palier"){
+    var y1=S.days*curGDay();
+    o.ev={y0:0,y1:y1};
+    o.tip=function(i){
+      var d=r.x[i], n=Math.round(d*r.nDay), kk=k, u=unitLbl()==="€"?NB+"€":" BI";
+      function f(v){ return (v>=0?"+":"")+num(v*kk, kk<1?1:0)+u; }
+      return ["Jour "+num(d,d<10?1:0)+" ("+num(n)+" tournois)","Attendu : "+f(d/(r.x[r.G])*y1),"Médiane : "+f(r.bands.q50[i]),"70 % : "+f(r.bands.q15[i])+" à "+f(r.bands.q85[i]),"95 % : "+f(r.bands.q025[i])+" à "+f(r.bands.q975[i])];
+    };
+  } else {
+    o.hl=[{v:S.dn1,label:"redescend sous "+S.dn1},{v:S.up1,label:"monte en 2 € à "+S.up1},{v:S.dn2,label:"redescend sous "+S.dn2},{v:S.up2,label:"monte en 5 € à "+S.up2}];
+    o.tip=function(i){ var d=r.x[i]; return ["Jour "+num(d,d<10?1:0),"Médiane : "+eur0(r.bands.q50[i]),"70 % : "+eur0(r.bands.q15[i])+" à "+eur0(r.bands.q85[i]),"95 % : "+eur0(r.bands.q025[i])+" à "+eur0(r.bands.q975[i])]; };
+  }
+  drawChart(cv,o);
+}
+function paintHist(){
+  var r=R||RS; if(!r) { setupCanvas($("hv")); return; }
+  var o={vals:r.finals,k:curK(),mean:r.kind!=="palier"?r.fin.mean:null};
+  drawHist($("hv"),o);
+  var N=r.P, txt;
+  if(r.kind!=="palier") txt="Les "+num(N)+" trajectoires, après "+S.days+" jour"+(S.days>1?"s":"")+". Rouge = perdant. "+(o.outside?num(o.outside)+" cas extrêmes sont hors du dessin (jackpots).":"");
+  else txt="Bankroll finale des "+num(N)+" trajectoires. Rouge = sous zéro.";
+  $("hNote").textContent=txt;
+}
+function renderMC(){
+  var r=R||RS, V=volumes(), b=S.b;
+  if(!r){ $("kB").innerHTML='<p class="mute">Calcul en cours.</p>'; $("tabH").innerHTML=""; return; }
+  var h="", gDay=curGDay();
+  if(r.kind!=="palier"){
+    var rows="<tr><th>Horizon</th><th>Gain attendu</th><th>90 % des cas</th><th>Chance d'être perdant</th></tr>";
+    r.probes.forEach(function(p){
+      var lab=p.days===1?"1 jour":(p.days===7?"1 semaine":"1 mois ("+p.days+" jours de jeu)");
+      rows+='<tr><td>'+lab+'</td><td class="'+signCls(gDay)+'">'+eur(p.days*gDay)+'</td><td>'+eur(p.q05)+' à '+eur(p.q95)+'</td><td>'+pcs(p.pLoss,r.P)+'</td></tr>';
+    });
+    rows+='<tr class="sel"><td>'+S.days+' jour'+(S.days>1?"s":"")+' de jeu (fin)</td><td class="'+signCls(gDay)+'">'+eur(S.days*gDay)+'</td><td>'+eur(r.fin.q05)+' à '+eur(r.fin.q95)+'</td><td>'+pcs(r.fin.pLoss,r.P)+'</td></tr>';
+    $("tabH").innerHTML=rows;
+    var bi = r.kind==="fixed" ? function(v){ return " ("+num(v/b,0)+" buy-ins)"; } : function(){ return ""; };
+    h+=tile(eur(r.fin.mean),"moyenne simulée en fin de période","médiane "+eur(r.fin.q50)+" ; attendu "+eur(S.days*gDay), signCls(r.fin.mean));
+    h+=tile(eur(r.fin.min)+" / "+eur(r.fin.max),"pire et meilleur parcours simulés","sur "+num(r.P)+" trajectoires");
+    h+=tile(eur0(r.dd.p50),"pire baisse, cas typique"+bi(r.dd.p50),"1 fois sur 10 : "+eur0(r.dd.p90)+bi(r.dd.p90)+" ; 1 fois sur 100 : "+eur0(r.dd.p99));
+    h+=tile(jours(r.st.p50),"plus longue période sans nouveau sommet","cas typique ; 1 fois sur 10 : "+jours(r.st.p90)+" ; pire vu : "+jours(r.st.max));
+    h+=tile(jours(r.sn.p50),"plus longue période sous zéro","cas typique ; 1 fois sur 10 : "+jours(r.sn.p90)+" ; pire vu : "+jours(r.sn.max));
+    h+=tile(pcs(r.ruin,r.P),"risque de tout perdre (simulé)","avec "+eur0(S.bank)+" au départ, sur "+S.days+" jours (tout perdre = moins d'une mise)", r.ruin>0.05?"bad":"");
+    if (r.roi){
+      var a=mom(S.cev[b],false);
+      h+=tile(num(r.roi.q05*100,1)+" à "+num(r.roi.q95*100,1)+NB+"%","ROI du jeu observé à la fin, 90 % des cas","médiane "+num(r.roi.q50*100,1)+NB+"% ; ROI réel du jeu "+num(a.ev*100,1)+NB+"%");
+    }
+    h+=tile(num(r.tournois)+"","tournois tirés un par un","en "+num(r.ms/1000,1)+" s, "+num(r.P)+" trajectoires"+(r.P<r.Preq?" (réduit de "+num(r.Preq)+" pour rester fluide)":""));
+    concNote="Simulé : "+pcs(r.probes[2].pLoss,r.P)+" de chances d'être perdant après 1 mois, "+pcs(r.fin.pLoss,r.P)+" après "+S.days+" jour"+(S.days>1?"s":"")+". Pire baisse typique : "+eur0(r.dd.p50)+".";
+  } else {
+    $("tabH").innerHTML="";
+    var l2=r.lev[0], l5=r.lev[1];
+    h+=tile(pc(l2.reached,0),"atteignent le 2 €","en "+S.days+" jours ; médiane "+(l2.median==null?"?":jours(l2.median))+", moyenne "+(l2.mean==null?"?":jours(l2.mean)));
+    h+=tile(pc(l5.reached,0),"atteignent le 5 €","médiane "+(l5.median==null?"pas atteint":jours(l5.median))+" ; moyenne "+(l5.mean==null?"?":jours(l5.mean))+" (pour ceux qui y arrivent)");
+    h+=tile(l5.dropPct==null?"?":pc(l5.dropPct,0),"redescendent du 5 € vers le 2 €","après y être montés ; en moyenne "+(l5.dropAvg==null?"?":num(l5.dropAvg,1))+" fois", l5.dropPct>0.3?"warn":"");
+    h+=tile(pc(r.down1,0),"repassent en 1 € après avoir été en 2 €","sur "+S.days+" jours");
+    h+=tile(eur0(r.fin.q50),"bankroll médiane à la fin","90 % entre "+eur0(r.fin.q05)+" et "+eur0(r.fin.q95));
+    h+=tile(pcs(r.ruin,r.P),"risque de tout perdre","bankroll sous 1 € ("+S.days+" jours)", r.ruin>0.05?"bad":"");
+    h+=tile(jours(r.time[0])+" / "+jours(r.time[1])+" / "+jours(r.time[2]),"temps passé en 1 € / 2 € / 5 €","moyenne par trajectoire");
+    h+=tile(num(r.tournois)+"","tournois tirés un par un","en "+num(r.ms/1000,1)+" s, "+num(r.P)+" trajectoires"+(r.P<r.Preq?" (réduit de "+num(r.Preq)+")":""));
+    concNote="Paliers simulés : "+pc(r.lev[1].reached,0)+" atteignent le 5 € en "+S.days+" jours, "+(r.lev[1].dropPct==null?"":pc(r.lev[1].dropPct,0)+" d'entre eux redescendent ensuite. ")+"Ruine : "+pcs(r.ruin,r.P)+".";
+  }
+  $("kB").innerHTML=h;
+  conclusion(gDay);
+}
+function renderSample(rows){
+  var t="<tr><th>Tournois joués</th><th>Au rythme choisi</th><th>Chance d'être perdant</th><th>ROI du jeu observé, 90 % des cas</th><th>cEV mesurée, 95 % de confiance</th></tr>";
+  if (S.mode==="vision"){ $("tabS").innerHTML=t+'<tr><td colspan="5" class="mute" style="text-align:left">Disponible dans les modes « Un seul niveau » et « Paliers ».</td></tr>'; $("sNote").textContent=""; return; }
+  var cev=S.cev[S.b], a=mom(cev,false), V=volumes();
+  if(!rows){ $("tabS").innerHTML=t+'<tr><td colspan="5" class="mute" style="text-align:left">Calcul en cours...</td></tr>'; $("sNote").textContent=""; return; }
+  var rbv=rbBI();
+  rows.forEach(function(r){
+    t+='<tr><td>'+num(r.N)+'</td><td>'+(V.n>0?jours(r.N/V.n):"?")+'</td><td>'+pcs(r.pLoss,1500)+'</td><td>'+num((r.q05-rbv)*100,0)+NB+'% à '+num((r.q95-rbv)*100,0)+NB+'%</td><td>'+num(cev,0)+' ± '+num(1.96*S.sd/Math.sqrt(r.N),0)+'</td></tr>';
+  });
+  $("tabS").innerHTML=t;
+  $("sNote").textContent="ROI réel du jeu choisi : "+num(a.ev*100,1)+" % (rakeback à part). Le ROI observé est le gain du jeu par tournoi divisé par la mise. La chance d'être perdant compte le jeu et le rakeback. La dernière colonne utilise l'écart-type des jetons du réglage avancé ("+num(S.sd)+").";
+}
+
+/* ---------- Orchestration du calcul ---------- */
+var worker=null, runId=0, timer=null, t0Run=0;
+function setBar(frac,txt){ $("barFill").style.width=(100*Math.max(0,Math.min(1,frac)))+"%"; if(txt!=null) $("barTxt").textContent=txt; }
+function killWorker(){ if(worker){ try{ worker.terminate(); }catch(e){} worker=null; } }
+function markStale(on){
+  stale=on;
+  ["cv","hv","kB","tabH","tabS"].forEach(function(id){ var e=$(id); if(e) e.className=(e.className||"").replace(/\bstale\b/g,"").trim()+(on?" stale":""); });
+}
+function buildMsg(){
+  var V=volumes(), b=S.b, mo=S.mode, rbe=rbEff();
+  var key=[S.cev[b],rbe,S.seed,b].join("|");
+  var m={type:"run", id:runId, mode:mo, bareme:BAREME, parts:PARTS, rake:RAKE, rb:rbe, b:b, cev:S.cev[b],
+    bonus:mo==="fixed"?V.bonus:0, nDay:V.n, days:S.days, dpm:DPM(), paths:S.paths, seed:S.seed, bank0:S.bank, budget:30e6, minPaths:mo==="palier"?150:200,
+    levels:[1,2,5], cevs:[S.cev[1],S.cev[2],S.cev[5]], rbs:[rbFor(1,V.acc),rbFor(2,V.acc),rbFor(5,V.acc)], up:[S.up1,S.up2], dn:[S.dn1,S.dn2],
+    doSample:mo!=="vision" && sampleCache.key!==key, sampleP:1500, sampleKey:key};
+  if (mo==="fixed" && S.room2){                                 // room en plus : même moteur que la vision, 2 flux
+    var n2=V.n*S.r2coef;
+    m.mode="vision"; m.bonus=V.bonus; m.nDay=V.n+n2;
+    m.vlevels=[{b:b,nTot:V.n,cev:S.cev[b],rb:rbe,rk:RAKE},{b:b,nTot:n2,cev:S.r2cev,rb:rbe,rk:S.r2rake/100}];
+  }
+  if (mo==="vision"){
+    m.vlevels=visLevels().map(function(l){ return {b:l.b, nTot:l.nTot, cev:l.cev, rb:rbFor(l.b,[l.n])}; });
+    m.nDay=m.vlevels.reduce(function(a,l){return a+l.nTot;},0);
+  }
+  return m;
+}
+function schedule(){
+  clearTimeout(timer); killWorker();
+  markStale(true); setBar(0,"Calcul dans un instant...");
+  timer=setTimeout(launch,350);
+}
+function launch(){
+  var msg0=buildMsg();
+  if(msg0.nDay<1){ R=null; RS=null; markStale(false); setBar(0,"Aucun tournoi par jour sur ce compte."); paintMain(); paintHist(); renderMC(); return; }
+  runId++; killWorker(); t0Run=Date.now();
+  var msg=buildMsg();
+  setBar(0.01,"Simulation...");
+  var w=null;
+  try{
+    var src="("+workerMain.toString()+")(self);";
+    var url=URL.createObjectURL(new Blob([src],{type:"application/javascript"}));
+    w=new Worker(url); setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} },5000);
+  }catch(e){ w=null; }
+  if(w){
+    worker=w; w.onmessage=onMsg;
+    w.onerror=function(){ killWorker(); runInline(msg); };
+    w.postMessage(msg);
+  } else runInline(msg);
+}
+function runInline(msg){
+  setBar(0.05,"Calcul dans la page (sans Worker), plus lent...");
+  msg.budget=Math.min(msg.budget,8e6); msg.minPaths=Math.min(msg.minPaths,100);
+  var fake={postMessage:function(m){ setTimeout(function(){ onMsg({data:m}); },0); }};
+  setTimeout(function(){ workerMain(fake); fake.onmessage({data:msg}); },30);
+}
+function onMsg(e){
+  var m=e.data; if(!m||m.id!==runId) return;
+  if(m.type==="progress"){ setBar(m.frac*(m.phase==="sample"?1:0.95), (m.phase==="sample"?"Tableau ROI observé... ":"Simulation... ")+Math.round(100*m.frac)+" %"); }
+  else if(m.type==="partial"){ R=m.res; hover=-1; markStale(false); paintAll(); setBar(0.3,"Aperçu avec "+num(m.res.P)+" trajectoires, calcul complet en cours..."); }
+  else if(m.type==="final"){ R=m.res; hover=-1; markStale(false); paintAll(); setBar(1,"Terminé : "+num(R.P)+" trajectoires, "+num(R.tournois)+" tournois tirés en "+num((Date.now()-t0Run)/1000,1)+" s."); }
+  else if(m.type==="sample"){ sampleCache={key:m.key,rows:m.rows}; renderSample(m.rows); }
+  else if(m.type==="done"){ if(!sampleCache.rows) renderSample(null); killWorker(); if(R) setBar(1,"Terminé : "+num(R.P)+" trajectoires, "+num(R.tournois)+" tournois tirés en "+num((Date.now()-t0Run)/1000,1)+" s."); }
+}
+function paintAll(){ paintMain(); paintHist(); renderMC(); renderSample(S.mode==="vision"?null:sampleCache.rows); }
+
+/* ---------- Onglet « Suivi jour par jour » ----------
+   Données : bloc JSON id="donnees-suivi" (copie de chantier_3010/suivi/publie/suivi.json, rafraîchie par donnees_reelles.py).
+   Affichage : le bloc SuiviResultats (script inline plus haut). Branchement alternatif : window.TW_renderSuivi(box, data, window.TW_outils). */
+function renderSuiviTab(){
+  var box=$("suiviBox"); if(!box) return;
+  var data=null;
+  try{ data=JSON.parse($("donnees-suivi").textContent); }catch(e){ data=null; }
+  var ok = data && typeof data==="object" && Object.keys(data).length>0;
+  if(ok && window.SuiviResultats){
+    try{ window.SuiviResultats.dessiner(box,data); }
+    catch(e){ box.innerHTML='<p class="bad">Le suivi n\'a pas pu s\'afficher.</p><p class="mute">'+esc(String(e&&e.message||e))+'</p>'; }
+    return;
+  }
+  if(ok && typeof window.TW_renderSuivi==="function"){
+    try{ box.innerHTML=""; window.TW_renderSuivi(box,data,window.TW_outils); }
+    catch(e){ box.innerHTML='<p class="bad">Le suivi n\'a pas pu s\'afficher.</p><p class="mute">'+esc(String(e&&e.message||e))+'</p>'; }
+    return;
+  }
+  box.innerHTML='<p><b>En préparation.</b></p><p class="mute">Ici : la chance aux tapis et aux multiplicateurs, les setups et les statistiques par période, jour par jour, sur les vrais tournois des 2 comptes.</p>';
+}
+window.TW_outils = {colors:colors, rgba:rgba, num:num, eur:eur, eur0:eur0, pc:pc, pcs:pcs, jours:jours, esc:esc, tile:tile, niceTicks:niceTicks, fmtTick:fmtTick,
+                    setupCanvas:setupCanvas, drawChart:drawChart, drawHist:drawHist};
+
+/* ---------- Événements ---------- */
+var raf=0;
+function quickSoon(){ if(raf) return; raf=setTimeout(function(){ raf=0; renderQuick(); },30); }   // minuterie (pas requestAnimationFrame : il s'arrête dans un onglet caché)
+function changed(heavy){
+  syncDom(); quickSoon();
+  if(heavy){ R=null; concNote=""; schedule(); }
+}
+function onControl(e){
+  var el=e.target, id=el.id||"";
+  if(id==="cev"){ S.cev[S.b]=+el.value; changed(true); return; }
+  if(id==="roi"){ var c=Math.round(cevFromRoi(+el.value/100)*10)/10; S.cev[S.b]=c; syncDomKeep("roi"); quickSoon(); R=null; concNote=""; schedule(); return; }
+  if(id==="unit"){ S.unit=el.value; syncDom(); paintAll(); return; }
+  if(id==="showPaths"||id==="showPaths2"){ S.showPaths=el.checked; syncDom(); paintAll(); return; }
+  if(id==="showBands"||id==="showBands2"){ S.showBands=el.checked; syncDom(); paintAll(); return; }
+  if(id.indexOf("c_")!==0) return;
+  var k=id.slice(2), spec=null;
+  Object.keys(CTL).forEach(function(bx){ CTL[bx].forEach(function(c){ if(c.k===k) spec=c; }); });
+  if(!spec) return;
+  var v = spec.chk ? el.checked : (spec.sel ? el.value : +el.value);
+  if(spec.num && !(v>=0)) return;
+  if(spec.vk) S.vis[spec.vk]=v;
+  else if(spec.lv) S.cev[spec.lv]=v;
+  else S[k]=v;
+  var heavyLv = spec.lv ? (spec.lv===S.b || S.mode==="palier") : true;
+  var heavy = !NOSIM[k] && heavyLv;
+  if(k==="rest"){ syncDom(); quickSoon(); return; }
+  changed(heavy);
+}
+function syncDomKeep(skip){
+  var keep=$(skip).value; syncDom(); $(skip).value=keep;
+  var roiv=mom(S.cev[S.b],false).ev*100; $("v_roi").textContent=num(roiv,1)+NB+"%";
+}
+function setLevel(b){ S.b=b; hover=-1; R=null; changed(true); }
+function setMode(m){
+  if(S.mode===m) return;
+  var was=S.mode; S.mode=m; R=null; RS=null; hover=-1;
+  if(m==="palier" && S.days<120) S.days=120;
+  if(was==="palier" && m!=="palier" && S.days===120) S.days=26;
+  changed(true);
+}
+function setTab(t){
+  S.tab=t; syncDom();
+  if(t==="suivi") renderSuiviTab(); else { paintAll(); }
+}
+function reset(){
+  var seed=S.seed, mode=S.mode, unit=S.unit, sp=S.showPaths, sb=S.showBands, tab=S.tab;
+  S=defauts(); S.seed=seed; S.mode=mode; S.unit=unit; S.showPaths=sp; S.showBands=sb; S.tab=tab;
+  if(mode==="palier") S.days=120;
+  R=null; sampleCache={key:"",rows:null}; changed(true);
+}
+function setTheme(t){
+  var root=document.documentElement;
+  if(t==="light"||t==="dark") root.setAttribute("data-theme",t); else root.removeAttribute("data-theme");
+  $("bTheme").textContent="Thème : "+(t==="light"?"clair":(t==="dark"?"sombre":"auto"));
+  try{ localStorage.setItem("twister-theme",t); }catch(e){}
+  paintAll();
+}
+var themeNow="auto";
+function initTheme(){
+  var t="auto"; try{ t=localStorage.getItem("twister-theme")||"auto"; }catch(e){}
+  if(t!=="light"&&t!=="dark") t="auto";
+  themeNow=t; setTheme(t);
+}
+function bind(){
+  var root=document.body||document;
+  ["input","change"].forEach(function(ev){ root.addEventListener(ev,function(e){ if(e.target&&e.target.id&&(e.target.id.indexOf("c_")===0||/^(cev|roi|unit|showPaths2?|showBands2?)$/.test(e.target.id))) onControl(e); }); });
+  $("segLvl").addEventListener("click",function(e){ var b=e.target&&e.target.getAttribute&&e.target.getAttribute("data-b"); if(b) setLevel(+b); });
+  $("segMode").addEventListener("click",function(e){ var m=e.target&&e.target.getAttribute&&e.target.getAttribute("data-mode"); if(m) setMode(m); });
+  $("segRb").addEventListener("click",function(e){ var v=e.target&&e.target.getAttribute&&e.target.getAttribute("data-rb"); if(v!=null){ S.rbAuto=(v==="1"); changed(true); } });
+  $("segTab").addEventListener("click",function(e){ var t=e.target&&e.target.getAttribute&&e.target.getAttribute("data-tab"); if(t) setTab(t); });
+  $("bNew").addEventListener("click",function(){ S.seed=Math.floor(Math.random()*2147483647); sampleCache={key:"",rows:null}; R=null; schedule(); });
+  $("bReset").addEventListener("click",reset);
+  $("bSave").addEventListener("click",scSave); $("bLink").addEventListener("click",scCopy);
+  $("scLoad").addEventListener("click",scLoad); $("scDel").addEventListener("click",scDel);
+  $("scGo").addEventListener("click",function(){ if(scFromText($("scCode").value)) scMsg("Scénario chargé."); else scMsg("Code ou lien non reconnu."); });
+  var tg=0; document.addEventListener("toggle",function(){ clearTimeout(tg); tg=setTimeout(paintAll,80); },true);
+  $("bTheme").addEventListener("click",function(){ themeNow = themeNow==="auto"?"light":(themeNow==="light"?"dark":"auto"); setTheme(themeNow); });
+  var cv=$("cv");
+  function move(e){
+    var r=R||RS; if(!r) return;
+    var rect=cv.getBoundingClientRect(), x=(e.clientX-rect.left), ml=ML, mr=MR, pw=rect.width-ml-mr;
+    var f=(x-ml)/pw; if(f<0) f=0; if(f>1) f=1;
+    var i=Math.round(f*(r.x.length-1)); if(i!==hover){ hover=i; paintMain(); }
+  }
+  cv.addEventListener("pointermove",move); cv.addEventListener("pointerdown",move);
+  cv.addEventListener("pointerleave",function(){ hover=-1; paintMain(); });
+  var rz=0; window.addEventListener("resize",function(){ clearTimeout(rz); rz=setTimeout(paintAll,120); });
+  try{ var mq=window.matchMedia("(prefers-color-scheme: dark)"); if(mq.addEventListener) mq.addEventListener("change",function(){ paintAll(); }); }catch(e){}
+}
+
+/* ---------- Démarrage ---------- */
+function init(){
+  S.tab="sim";
+  buildControls();
+  var sum=BAREME.reduce(function(a,r){return a+r[1];},0);
+  $("sumP").textContent=num(sum*100,3)+NB+"%";
+  $("dataDate").textContent=D?String(D.genere||"").replace("T"," à ")+" ("+num(D.tournois_total)+" tournois, du "+(D.periode?D.periode.debut:"?")+" au "+(D.periode?D.periode.fin:"?")+")":"aucune donnée";
+  bind(); initTheme(); scFill(); var depuisLien=scFromHash(); syncDom(); renderQuick(); renderSample(null); paintAll(); schedule();
+}
+window.__TW = {snapshot:snapshot, applySnapshot:applySnapshot, scLinkNow:scLinkNow, scFromText:scFromText, roomsDay:roomsDay, probAtLeast:probAtLeast, multBox:multBox, S:function(){return S;}, mom:mom, quick:quick, workerMain:workerMain, BAREME:BAREME, PARTS:PARTS, RAKE:RAKE, volumes:volumes, setS:function(k,v){S[k]=v;}, init:init, defauts:defauts, cevFromRoi:cevFromRoi, breakEven:breakEven, renderQuick:renderQuick, setMode:setMode, setLevel:setLevel, onControl:onControl, reset:reset, setTab:setTab, visCalc:visCalc, starOf:starOf, rbFor:rbFor};
+init();
+})();
+</script>
+
+<div id="chargeur" style="max-width:760px;margin:0 auto;padding:16px;font:16px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--ink)">Chargement des données…</div>
+<script>
+(function () {
+  "use strict";
+  var DONNEES = (location.hostname === "127.0.0.1" || location.hostname === "localhost") ? "simu.enc" : "https://raw.githubusercontent.com/colfersimon/tableau/donnees/simu.enc";
+  var zone = document.getElementById("chargeur");
+  function b64(s) { return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); }
+  function decoderCle(t) {
+    try {
+      var h = String(t).replace(/-/g, "+").replace(/_/g, "/");
+      var k = b64(h + "===".slice((h.length + 3) % 4));
+      return k.length === 64 ? k : null;
+    } catch (e) { return null; }
+  }
+  function cleDuLien() {                       // #<clé>  ou  #<clé>&s=<scénario>  ou  #s=<scénario> (clé alors retenue)
+    var parts = String(location.hash || "").replace(/^#/, "").split("&"), k = null, i;
+    for (i = 0; i < parts.length; i++) {
+      if (!parts[i] || /^s=/.test(parts[i])) continue;
+      k = decoderCle(parts[i].replace(/^k=/, ""));
+      if (k) { try { localStorage.setItem("twister-cle", parts[i].replace(/^k=/, "")); } catch (e) { /* stockage interdit */ } return k; }
+    }
+    try { var s = localStorage.getItem("twister-cle"); if (s) return decoderCle(s); } catch (e) { /* stockage interdit */ }
+    return null;
+  }
+  async function dechiffrer(cle, texte) {      // même format que le lien fixe (AES-256-CBC + HMAC-SHA256)
+    var d = JSON.parse(texte), iv = b64(d.iv), ct = b64(d.ct), mac = b64(d.mac);
+    var kMac = await crypto.subtle.importKey("raw", cle.slice(32), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    var tout = new Uint8Array(iv.length + ct.length); tout.set(iv); tout.set(ct, iv.length);
+    if (!await crypto.subtle.verify("HMAC", kMac, mac, tout)) throw new Error("clé fausse");
+    var kAes = await crypto.subtle.importKey("raw", cle.slice(0, 32), { name: "AES-CBC" }, false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, kAes, ct)));
+  }
+  function message(t) { zone.textContent = t; }
+  function demarrer(donnees) {
+    document.getElementById("donnees-reelles").textContent = JSON.stringify(donnees.reelles || {});
+    document.getElementById("donnees-suivi").textContent = JSON.stringify(donnees.suivi || {});
+    zone.style.display = "none";
+    var s = document.createElement("script");
+    s.text = document.getElementById("appsimu").textContent;
+    document.body.appendChild(s);
+  }
+  (async function () {
+    var cle = cleDuLien();
+    if (!cle) { message("Lien incomplet : il manque la clé après le # de l'adresse. Prends le lien du tableau et remplace « tableau/ » par « tableau/simulateur.html »."); return; }
+    try {
+      var r = await fetch(DONNEES + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      demarrer(await dechiffrer(cle, await r.text()));
+    } catch (e) {
+      message(String(e.message) === "clé fausse" ? "Lien faux : la clé ne correspond pas." : "Données pas encore disponibles (" + String(e.message).replace(/[<>&]/g, "") + "). Réessaie dans quelques minutes.");
+    }
+  })();
+})();
+</script>
+</body>
+</html>
